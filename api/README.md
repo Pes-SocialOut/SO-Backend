@@ -24,15 +24,15 @@ $: python3 -m venv api/env
 $: source api/env/bin/activate
 
 -- Instalar dependencias antiguas
-$: pip install -r api/requirements.txt
+$: pip3 install -r api/requirements.txt
 
 -- Instalar nuevas dependencias
-$: pip install ...[librerías a añadir]...
+$: pip3 install ...[librerías a añadir]...
 
 -- Hacer tests, pruevas, etc.
 
 -- Guardar nuevas dependencias en requirements para que los demás las tengan al proximo "pull"
-$: pip freeze > api/requirements.txt
+$: pip3 freeze > api/requirements.txt
 
 -- Desactivar el entorno
 $: deactivate
@@ -70,3 +70,21 @@ $: docker-compose down -v
 (Note: el flag -v elimina los volumenes, que són espacios de memoria del contenedor que se almacenan localmente. Si el servicio no usa volumenes no hace falta el flag)
 
 Una vez esté corriendo deberias poder entrar a localhost:5000 en tu navegador y que te responda con el texto de página no encontrada, y entrar a localhost:5000/auth/signin que muestra el texto del endpoint de este módulo "Always successful".
+
+## POLÍTICA DE TESTS
+
+Los tests se deben crear en ficheros acabados en el sufijo \*\_test.py y en directorios que empiezen con el prefijo module\_\*.
+
+Los directorios de modulos en el paquete de /test deberían organizarse simétricamente a la estructura declarada en el paquete /app separando así modularmente las responsabilidades que chequean cada test.
+
+Para seguir una metodología correcta los tests deben seguir el formato AAA (1. Arrange, 2. Action, 3. Assert) y al ser unitarios significa que son independientes entre sí, por lo que en el método setUp se debe asegurar que el entorno queda en un estado inicial controlado.
+
+Para ejecutar todos los tests que hay de la API:
+```
+python3 api/test/run_all_tests.py
+```
+Para ejecutar solo una clase TestCase (un solo fichero _test.py)
+```
+python3 unittest path_to/unit_test.py
+```
+(Recordar a activar el entorno virtual de python si los tests requieren dependencias de requirements.txt)
