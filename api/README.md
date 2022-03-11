@@ -24,7 +24,7 @@ $: python3 -m venv api/env
 $: source api/env/bin/activate
 
 -- Instalar dependencias antiguas
-$: pip install api/requirements.txt
+$: pip install -r api/requirements.txt
 
 -- Instalar nuevas dependencias
 $: pip install ...[librerías a añadir]...
@@ -69,4 +69,4 @@ $: docker-compose down -v
 ```
 (Note: el flag -v elimina los volumenes, que són espacios de memoria del contenedor que se almacenan localmente. Si el servicio no usa volumenes no hace falta el flag)
 
-Una vez esté corriendo deberias poder entrar a localhost:5000 en tu navegador y que te responda algo.
+Una vez esté corriendo deberias poder entrar a localhost:5000 en tu navegador y que te responda con el texto de página no encontrada, y entrar a localhost:5000/auth/signin que muestra el texto del endpoint de este módulo "Always successful".

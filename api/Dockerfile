@@ -1,4 +1,4 @@
-FROM tiangolo/uwsgi-nginx-flask:python3.6-alpine3.7
+FROM python:3.8-alpine
 
 # Copiar nuestro fichero de dependencias
 COPY ./requirements.txt /tmp/requirements.txt
@@ -12,5 +12,6 @@ COPY ./run.py /api/run.py
 COPY ./config.py /api/config.py
 COPY ./app /api/app
 
+EXPOSE 5000
 WORKDIR /api
 CMD ["python3", "run.py"]
