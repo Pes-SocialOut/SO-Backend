@@ -81,10 +81,12 @@ Para seguir una metodología correcta los tests deben seguir el formato AAA (1. 
 
 Para ejecutar todos los tests que hay de la API:
 ```
-python3 api/test/run_all_tests.py
+$: pytest api/test
 ```
-Para ejecutar solo una clase TestCase (un solo fichero _test.py)
+Para ejecutar solo una clase Test...Suite (un solo fichero _test.py)
 ```
-python3 unittest path_to/unit_test.py
+$: pytest path_to/unit_test.py
 ```
-(Recordar a activar el entorno virtual de python si los tests requieren dependencias de requirements.txt)
+(Recordar a activar el entorno virtual de python si los tests requieren dependencias de requirements.txt. También se debe instalar pytest con apt install python-pytest)
+
+Si se quieren ver los prints que tenga el test hay que añadir el flag -s.
