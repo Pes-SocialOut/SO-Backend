@@ -1,43 +1,39 @@
 # Import the database object (db) from the main application module
 # We will define this inside /app/__init__.py in the next sections.
 from app import db
-
-
-# Define a base model for other database tables to inherit
-class Base(db.Model):
-
-    __abstract__ = True
-
-    nombre = db.Column(db.Integer, primary_key=True)
-    descripcion = db.Column(db.String)
-    fechaCreada = db.Column(db.DateTime,  default=db.func.current_timestamp())
-    fechaAcaba = db.Column(db.DateTime)
-    usuarioCreador = db.Column(db.String)
-
+from uuid import UUID
 
 # Define a User model
-class User(Base):
+class Event(db.Model):
 
-    __tablename__ = 'auth_user'
+    __tablename__ = 'events'
 
-    # User Name
-    name = db.Column(db.String(128),  nullable=False)
-
-    # Identification Data: email & password
-    email = db.Column(db.String(128),  nullable=False,
-                      unique=True)
-    password = db.Column(db.String(192),  nullable=False)
-
-    # Authorisation Data: role & status
-    role = db.Column(db.SmallInteger, nullable=False)
-    status = db.Column(db.SmallInteger, nullable=False)
+    # Event id
+    id = db.Column(UUID(as_uuid=true), primary_key=True, default=uuid.uuid4)
+    # Event name
+    name = db.Column(db.String)
+    # Event description
+    description = db.Column(db.String)
+    # Start date of the event
+    dateStarted = db.Column(db.DateTime)
+    # End date of the event
+    dateEnd = db.Column(db.DateTime)
+    # Creator of the event
+    userCreator = db.Column(UUID(as_uuid=true))
+    # Longitude of the location where the event will take taking place
+    longitud = db.Column(db.Float)
+    # Latitude of the location where the event will take taking place
+    latitude = db.Column(db.Float)
 
     # New instance instantiation procedure
-    def __init__(self, name, email, password):
+    def __init__(self, id, name, description, dateCreated, dateEnd, userCreator):
 
+        self.id = id
         self.name = name
-        self.email = email
-        self.password = password
+        self.description = description
+        self.dateCreated = dateCreated
+        self.dateEnd = dateEnd
+        self.userCreator = userCreator
 
     def __repr__(self):
-        return '<User %r>' % (self.name)
+        return '<Event %r>' % (self.name)
