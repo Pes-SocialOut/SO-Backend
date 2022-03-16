@@ -23,8 +23,9 @@ $: python3 -m venv api/env
 -- Activa el entorno virtual de trabajo
 $: source api/env/bin/activate
 
--- Instalar dependencias antiguas
-$: pip install api/requirements.txt
+-- Upgrade de pip y wheel e instalar dependencias del proyecto
+$: pip install -U pip wheel
+$: pip install -r api/requirements.txt
 
 -- Instalar nuevas dependencias
 $: pip install ...[librerías a añadir]...

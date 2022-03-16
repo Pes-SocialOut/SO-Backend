@@ -9,3 +9,26 @@ services:
       - 5000:5000
     environment:
       SECRET_KEY: some_secret_in_env_variable
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 2m
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+  db:
+    image: postgres:9.4
+    container_name: social_out_db
+    ports:
+      - 5432:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    
+    environment:
+      POSTGRES_USER: socialout
+      POSTGRES_PASSWORD: password1
+      POSTGRES_DB: socialout
+
+volumes:
+  pgdata:
+    driver: local
