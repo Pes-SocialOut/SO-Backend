@@ -6,7 +6,7 @@ from flask import Blueprint, request, render_template, \
 #from app import db
 
 # Import module models (i.e. User)
-from app.module_auth.models import User
+#from app.module_auth.models import User
 
 # Define the blueprint: 'auth', set its url prefix: app.url/auth
 module_auth = Blueprint('auth', __name__, url_prefix='/auth')

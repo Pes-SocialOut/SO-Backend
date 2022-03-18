@@ -21,11 +21,11 @@ def not_found(error):
 
 # Import a module / component using its blueprint handler variable (mod_auth)
 from app.module_auth.controllers import module_auth
-from app.module_domain.controllers import module_domain
+#from app.module_domain.controllers import module_domain
 
 # Register blueprint(s)
 app.register_blueprint(module_auth)
-app.register_blueprint(module_domain)
+#app.register_blueprint(module_domain)
 
 # Build the database:
 # This will create the database file using SQLAlchemy
