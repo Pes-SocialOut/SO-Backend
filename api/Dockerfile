@@ -17,5 +17,4 @@ COPY ./migrations /api/migrations
 COPY ./manage.py /api/manage.py
 
 WORKDIR /api
-#FIXME: For some reason the env. var. don't get copied as they should
 CMD ["python3", "run.py"]

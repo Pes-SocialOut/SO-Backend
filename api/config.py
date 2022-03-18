@@ -8,7 +8,7 @@ DEBUG = os.getenv('API_DEBUG')
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))  
 
 # Define the database we are working with 
-SQLALCHEMY_DATABASE_URI = "postgresql://socialout:password1@localhost:5432/socialout" #os.getenv('SQLALCHEMY_DATABASE_URI')
+SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 DATABASE_CONNECT_OPTIONS = {}
 
