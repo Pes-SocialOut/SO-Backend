@@ -59,7 +59,7 @@ class DateHour(db.Model):
         db.session.commit()
 
     def __repr__(self):
-        return "".format(self.name)
+        return "".format(self.DateHour)
 
 import enum 
 class StationType(enum.Enum):
@@ -86,6 +86,62 @@ class AirQualityStation(db.Model):
     GeoReference = db.Column(db.String)
     #Ubicacion = db.Column(db.Integer, db.ForeignKey("Identificador")) 
 
+    def __init__(self, Name, Eoicode, StationType, UrbanArea, Height, GeoReference):
+        """initialize with name."""
+        self.Name = Name
+        self.EOIcode = Eoicode
+        self.StationType = StationType
+        self.UrbanArea = UrbanArea
+        self.Height = Height
+        self.GeoReference = GeoReference
+
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
+    @staticmethod
+    def get_all():
+        return AirQualityStation.query.all()
+
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+
+    def __repr__(self):
+        return "".format(self.Name, self.EOIcode, self.StationType, self.UrbanArea, self.Height, self.GeoReference)
+class AirQualityData(db.Model):
+    __tablename__ = 'AirQualityData'
+
+    DateHour = db.Column(db.DateTime, db.ForeignKey("DateHour"), primary_key=True)
+    EOIcodeStation = db.Column(db.Integer, db.ForeignKey("AirQualityStation"))
+    
+    Magnitude = db.Column(db.Integer)
+    PollutantComposition = db.Column(db.String)
+    Units = db.Column(db.String)
+
+    def __init__(self, DateHour, EOIcodeStation, Magnitude, PollutantComposition, Units):
+        """initialize with name."""
+        self.DateHour = DateHour
+        self.EOIcodeStation = EOIcodeStation
+        self.Magnitude = Magnitude
+        self.PollutantComposition = PollutantComposition
+        self.Units = Units
+
+
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
+    @staticmethod
+    def get_all():
+        return AirQualityData.query.all()
+
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+
+    def __repr__(self):
+        return "".format(self.DateHour, self.EOIcode, self.Magnitude, self.PollutantComposition, self.Units)
 
 class Language(db.Model):
 
@@ -93,11 +149,47 @@ class Language(db.Model):
 
     name = db.Column(db.String, primary_key=True)
 
+    def __init__(self, name):
+        self.name = name
+
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
+    @staticmethod
+    def get_all():
+        return AirQualityData.query.all()
+
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+
+    def __repr__(self):
+        return "".format(self.name)
+
 class LanguageUser(db.Model):
     __tablename__ = 'LanguageUser'
 
     Language = db.Column(db.String, db.ForeignKey("Language"), primary_key=True)
-    UserName = db.Column(db.String, db.ForeignKey("User"), primary_key=True)
+    #UserName = db.Column(db.String, db.ForeignKey("User"), primary_key=True)
+
+    def __init__(self, Language):
+        self.Language = Language
+
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
+    @staticmethod
+    def get_all():
+        return AirQualityData.query.all()
+
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+
+    def __repr__(self):
+        return "".format(self.Language)
 
 class SocialMedia(db.Model):
     __tablename__ = 'SocialMedia'
@@ -108,10 +200,10 @@ class SocialMediaUser(db.Model):
     __tablename__ = 'SocialMediaUser'
 
     SocialMediaName = db.Column(db.String, db.ForeignKey("SocialMedia"), primary_key=True)
-    UserName = db.Column(db.String, db.ForeignKey("User"), primary_key=True)
+    #UserName = db.Column(db.String, db.ForeignKey("User"), primary_key=True)
 
-class Logros(db.Model):
-    __tablename__ = 'Logros'
+class Achievements(db.Model):
+    __tablename__ = 'Achievements'
 
     ID = db.Column(db.String, primary_key=True)
     Name = db.Column(db.String)
