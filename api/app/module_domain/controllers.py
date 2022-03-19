@@ -6,15 +6,15 @@ from flask import Blueprint, request, render_template, \
 #from app import db
 
 # Import module models (i.e. User)
-#from app.module_auth.models import User
+from app.module_domain.models_simple import SocialMedia
 
 # Define the blueprint: 'auth', set its url prefix: app.url/auth
-module_auth = Blueprint('auth', __name__, url_prefix='/auth')
+module_domain = Blueprint('domain', __name__, url_prefix='/domain')
 
 # Set the route and accepted methods
-@module_auth.route('/signin/', methods=['GET', 'POST'])
+@module_domain.route('/air_station/', methods=['GET'])
 def signin():
 
     # TODO: Authenticate user
 
-    return "Always successful", 200
+    return 'My awesome airstation', 200
