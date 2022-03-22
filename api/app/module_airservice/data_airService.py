@@ -17,7 +17,7 @@ for d in response_json:
     for keys in d:
         print(keys, ':', d[keys])
 
-
+#_____________________________________________________PRUEBAS_________________________________________________
 
 codi_eoi=0; nom_estacio=''; contaminant=''; unitats=''; tipus_estacio=''; area_urbana='';magnitud = 0
 h1=0; h2=0; h3=0; h4=0; h5=0; h6=0; h7=0; h8=0; h9=0; h10=0; h11=0; h12=0
