@@ -1,15 +1,15 @@
 #TEMPLATE TAKEN FROM DIGITAL_OCEAN PROJECT STRUCTURE
+import os
 
 # Statement for enabling the development environment
-DEBUG = True
+DEBUG = os.getenv('API_DEBUG')
 
 # Define the application directory
-import os
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))  
 
-# Define the database - we are working with
-# SQLite for this example
-SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASE_DIR, 'app.db')
+# Define the database we are working with 
+SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
+SQLALCHEMY_TRACK_MODIFICATIONS = False
 DATABASE_CONNECT_OPTIONS = {}
 
 # Application threads. A common general assumption is
@@ -23,7 +23,7 @@ CSRF_ENABLED     = True
 
 # Use a secure, unique and absolutely secret key for
 # signing the data. 
-CSRF_SESSION_KEY = "secret"
+CSRF_SESSION_KEY = os.getenv('API_SECRET_KEY')
 
 # Secret key for signing cookies
-SECRET_KEY = "secret"
+SECRET_KEY = os.getenv('API_SECRET_KEY')

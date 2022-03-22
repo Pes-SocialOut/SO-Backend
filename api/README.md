@@ -23,8 +23,9 @@ $: python3 -m venv api/env
 -- Activa el entorno virtual de trabajo
 $: source api/env/bin/activate
 
--- Instalar dependencias antiguas
-$: pip3 install -r api/requirements.txt
+-- Upgrade de pip y wheel e instalar dependencias del proyecto
+$: pip install -U pip wheel
+$: pip install -r api/requirements.txt
 
 -- Instalar nuevas dependencias
 $: pip3 install ...[librerías a añadir]...
@@ -61,6 +62,36 @@ $: docker-compose up --build api
 ```
 (Note: Si estás en windows ejecutalo des del terminal que se abre en el VSCode, no hace falta entrar en wsl)
 
+Si te salen errores en docker que hablan sobre "Environmental variable is not set" hace falta exportar las variables de entorno a tu ordenador para que docker-compose las pueda encontrar.
+
+Si estás en linux eres un máquina y es muy fácil:
+```
+$: source api/testEnv.sh
+```
+Si ejecutas lo siguiente y sale 5000 es que lo tienes bien:
+```
+$: echo $API_PORT
+```
+Deberías poder ejecutar el docker-compose y que funcionase.
+
+En windows hay que ejecutar en el terminal de vscode (o PowerShell):
+```
+$: .\api\testEnvWin.ps1
+```
+Si salen errores en rojo sobre no poder ejecutar scripts es normal, pero habia que probar a ver si colaba ;)
+Abre un PowerShell (no funciona en el terminal) en modo administrador! y ves al directorio del proyecto (SO-Backend):
+```
+$: Set-ExecutionPolicy -ExecutionPolicy Unrestricted
+$: .\api\testEnvWin.ps1
+$: Set-ExecutionPolicy -ExecutionPolicy Default
+```
+(devuelvo el modo a default por seguridad)
+Para ver si ha funcionado ejecuta lo siguiente y deberia salirte un 5000
+```
+$: echo $Env:API_PORT
+```
+Vuelve a ejecutar la instrucción del docker y pásalo bien fiera.
+
 Tras la primera ejecución, si la receta del Dockerfile o el docker-compose.yml no se cambia, no hace falta poner el flag de --build.
 
 Para resetear el entorno podemos parar el container con:
@@ -70,6 +101,41 @@ $: docker-compose down -v
 (Note: el flag -v elimina los volumenes, que són espacios de memoria del contenedor que se almacenan localmente. Si el servicio no usa volumenes no hace falta el flag)
 
 Una vez esté corriendo deberias poder entrar a localhost:5000 en tu navegador y que te responda con el texto de página no encontrada, y entrar a localhost:5000/auth/signin que muestra el texto del endpoint de este módulo "Always successful".
+
+## EJECUTAR LA BD EN ENTORNO AISLADO
+Los scripts de variables de entorno que has ejecutado antes también sirven para esta parte.
+
+Ejecuta:
+```
+$: docker-compose up --build db
+```
+(recuerda lo del flag --build, solo la primera vez o si cambia la receta)
+
+La base de datos PostgreSQL deberia estar corriendo!
+Puedes conectarte a través de un cliente como por ejemplo DBeaver con las credenciales:
+- username: socialout
+- password: password1
+- database: socialout
+- port: 5432
+
+En todo caso, para poner al dia la bd con la versión más reciente entra en el virtual environment de python (créalo como se indica más arriba si no lo has hecho aún) y ejecuta **des del directorio /api**:
+```
+$: python3 manage.py db migrate
+```
+Esto crea las versiones de migraciones (solo tiene efecto si has cambiado algo en los models.py de los módulos que están activamente en uso en la API).
+Para trasladar estas actualizaciones a la bd:
+```
+$: python3 manage.py db upgrade
+```
+Mira con el DBeaver si se han creado las tablas que esperabas en tu PotsgreSQL.
+
+***Cuidado!*** Si estás en Windows pero usas el WSL para correr el virtualenv y quieres hacer "migrate" o "upgrade" debes de correr el script testEnv.sh dentro del WSL para que la construcción de la API funcione, y también el testEnvWin.ps1 para que el docker coja las variables de entorno que necesita (al correr sobre Windows).
+
+**NOTA:** Podeis ejecutar ambos entornos a la vez con:
+```
+$: docker-compose up --build
+```
+(sin el flag a partir de la segunda vez)
 
 ## POLÍTICA DE TESTS
 
@@ -81,10 +147,13 @@ Para seguir una metodología correcta los tests deben seguir el formato AAA (1. 
 
 Para ejecutar todos los tests que hay de la API:
 ```
-python3 api/test/run_all_tests.py
+$: pytest api/test
 ```
-Para ejecutar solo una clase TestCase (un solo fichero _test.py)
+Para ejecutar solo una clase Test...Suite (un solo fichero _test.py)
 ```
-python3 unittest path_to/unit_test.py
+$: pytest path_to/unit_test.py
 ```
-(Recordar a activar el entorno virtual de python si los tests requieren dependencias de requirements.txt)
+(Recordar a activar el entorno virtual de python si los tests requieren dependencias de requirements.txt. También se debe instalar pytest con apt install python-pytest)
+
+Si se quieren ver los prints que tenga el test hay que añadir el flag -s.
+Una vez esté corriendo deberias poder entrar a localhost:5000 en tu navegador y que te responda algo.
