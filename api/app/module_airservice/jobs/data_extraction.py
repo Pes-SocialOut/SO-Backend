@@ -2,8 +2,11 @@ from urllib import response
 import requests
 import json
 
-#from api.app.module_domain.models import AirQualityData, AirQualityStation
+# Import the database object from the main app module
+from app import db
 
+# Import module models
+from app.module_airservice.models import AirQualityData, AirQualityStation
 
 #llamadas a la API que contiene datos sobre la contaminación del aire
 url = 'https://analisi.transparenciacatalunya.cat/resource/tasf-thgu.json?data=2022-03-20&nom_estacio=Gavà&$order=codi_eoi'
