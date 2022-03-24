@@ -2,8 +2,7 @@
 # We will define this inside /app/__init__.py in the next sections.
 from app import db
 from sqlalchemy.dialects.postgresql import UUID
-from datetime import datetime
-import uuid
+from uuid import uuid
 
 
 # Define a User model
@@ -29,7 +28,7 @@ class Event(db.Model):
     latitude = db.Column(db.Float)
 
     # New instance instantiation procedure
-    def __init__(self, id, name, description, dateCreated, dateEnd, userCreator):
+    def __init__(self, id, name, description, dateCreated, dateEnd, userCreator, longitud, latitude):
 
         self.id = id
         self.name = name
@@ -37,6 +36,8 @@ class Event(db.Model):
         self.dateCreated = dateCreated
         self.dateEnd = dateEnd
         self.userCreator = userCreator
+        self.longitud = longitud
+        self.latitude = latitude
 
     def __repr__(self):
         return '<Event %r>' % (self.name)
