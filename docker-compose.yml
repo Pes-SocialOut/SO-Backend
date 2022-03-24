@@ -21,6 +21,8 @@ services:
     container_name: social_out_api
     ports: 
       - ${API_PORT}:${API_PORT}
+    depends_on:
+      - db
     environment:
       API_PORT: ${API_PORT}
       API_DEBUG: ${API_DEBUG}

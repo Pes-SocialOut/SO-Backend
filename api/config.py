@@ -12,6 +12,8 @@ SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 DATABASE_CONNECT_OPTIONS = {}
 
+MIGRATIONS_SQLALCHEMY_DATABASE_URI = os.getenv('MIGRATIONS_SQLALCHEMY_DATABASE_URI')
+
 # Application threads. A common general assumption is
 # using 2 per available processor cores - to handle
 # incoming requests using one and performing background
