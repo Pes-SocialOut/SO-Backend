@@ -28,6 +28,7 @@ services:
       API_DEBUG: ${API_DEBUG}
       API_SECRET_KEY: ${API_SECRET_KEY}
       SQLALCHEMY_DATABASE_URI: ${SQLALCHEMY_DATABASE_URI}
+      PYTHONPATH: "/api"
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost"]
