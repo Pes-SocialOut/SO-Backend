@@ -84,13 +84,15 @@ class polutant(db.Model):
     common_lowerbound = db.Column(db.Float)
     common_upperbound = db.Column(db.Float)
     units = db.Column(db.String)
+    air_quality_weight = db.Column(db.Float)
 
-    def __init__(self, composition, common_lowerbound, common_upperbound, units):
+    def __init__(self, composition, common_lowerbound, common_upperbound, units, air_quality_weight):
         
         self.composition = composition
         self.common_lowerbound = common_lowerbound
         self.common_upperbound = common_upperbound
         self.units = units
+        self.air_quality_weight = air_quality_weight
 
 
 
@@ -107,7 +109,7 @@ class polutant(db.Model):
         db.session.commit()
 
     def __repr__(self):
-        return "".format(self.composition, self.common_lowerbound, self.common_upperbound, self.units)
+        return "".format(self.composition, self.common_lowerbound, self.common_upperbound, self.units, self.air_quality_weight)
 
 
 
