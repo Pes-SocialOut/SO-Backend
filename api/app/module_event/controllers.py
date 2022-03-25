@@ -15,6 +15,37 @@ module_event = Blueprint('event', __name__, url_prefix='/events')
 
 # Set the route and accepted methods
 
+# POST method: creates an event in the database
+@module_event.route('', methods=['POST'])
+def create_event():
+    return "Always successful POST", 200
+
+# GET method: returns the information of one event
+@module_event.route('', methods=['GET'])
+def get_event():
+    return "Always successful GET", 200
+
+# DELETE method: deletes an event from the database
+@module_event.route('', methods=['DELETE'])
+def delete_event():
+    return "Always successful DELETE", 200
+
+# GET ALL method: returns the information of all the events of the database
+@module_event.route('/', methods=['GET'])
+def get_all_events():
+    return "Always successful GET ALL", 200
+
+# PUT method: Modifies the information of a specific event of the database
+@module_event.route('', methods=['PUT'])
+def modify_events():
+    return "Always successful PUT", 200
+
+
+# If the event doesn't exist
+@module_event.errorhandler(404)
+def page_not_found(e):
+    return "<h1>404</h1><p>The event could not be found.</p>", 404
+
 # TESTING THE DATABASE
 @module_event.route('/', methods=['GET', 'POST'])
 def event():
@@ -25,16 +56,3 @@ def event():
     db.session.commit()
 
     return "Always successful", 200
-
-# To get all the events
-@module_event.route('/all', methods=['GET'])
-def all_events():
-
-    # TODO: return all events
-
-    return "Always successful", 200
-
-# If the event doesn't exist
-@module_event.errorhandler(404)
-def page_not_found(e):
-    return "<h1>404</h1><p>The resource could not be found.</p>", 404
