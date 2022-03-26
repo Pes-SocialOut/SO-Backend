@@ -78,8 +78,8 @@ class air_quality_station(db.Model):
     def __repr__(self):
         return "".format(self.name, self.eoi_code, self.station_type, self.urban_area, self.height, self.latitude, self.lenght, self.air_condition_scale, self.time_computation_scale)
 
-class polutant(db.Model):
-    __tablename__ = 'polutant'
+class pollutant(db.Model):
+    __tablename__ = 'pollutant'
     composition = db.Column(db.String, primary_key=True)
     common_lowerbound = db.Column(db.Float)
     common_upperbound = db.Column(db.Float)
@@ -118,7 +118,7 @@ class air_quality_data(db.Model):
 
     date_hour = db.Column(db.DateTime, db.ForeignKey(date_hour.date_hour), primary_key=True)
     station_eoi_code = db.Column(db.String, db.ForeignKey(air_quality_station.eoi_code), primary_key=True)
-    pollutant_composition = db.Column(db.String, db.ForeignKey(polutant.composition), primary_key=True)
+    pollutant_composition = db.Column(db.String, db.ForeignKey(pollutant.composition), primary_key=True)
     value = db.Column(db.Float)
     contaminant_scale = db.Column(db.Float)
    
