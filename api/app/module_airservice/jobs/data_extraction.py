@@ -1,4 +1,3 @@
-from typing_extensions import Self
 from urllib import response
 from datetime import datetime
 from datetime import timedelta
@@ -6,16 +5,10 @@ import requests
 import json
 import os
 
-from api.app.module_airservice.jobs.pollutants import contaminantes
+from app.module_airservice.jobs.pollutants import contaminantes
 from sqlalchemy import create_engine
 
-from api.app.module_airservice.models import station_type, urban_area
-
-# Import the database object from the main app module
-#from app import db
-
-# Import module models
-#from app.module_airservice.models import AirQualityData, AirQualityStation
+from app.module_airservice.models import station_type, urban_area
 
 #FIXME: Change MIGRATIONS_ to URI in production. Now it is needed for testing from console.
 engine = create_engine(os.getenv("MIGRATIONS_SQLALCHEMY_DATABASE_URI"))
@@ -32,16 +25,16 @@ data_anterior = data_anterior.strftime('%Y-%m-%d')
 
 
 
-def insert_air_station() -> None:
-    airCS = 0.0
+def insert_air_station(eoi_code, name, station_t, urban_a, altitude, latitude, longitude) -> None:
     try:
         with engine.connect() as conn:
             conn.execute(
                 'INSERT INTO air_quality_station VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)',
-                (nom_estacio, codi_eoi, tipus_estacio, area_urbana, altitud, latitud, longitud, airCS, data_today)
+                (eoi_code, name, station_t, urban_a, altitude, latitude, longitude, 0.0, data_today)
             )
-    except:
-        pass
+    except Exception as err:
+        print("Falla inserir estacion")
+        print(err)
 
 
 def normalizar(cont, valor) -> float:
@@ -53,31 +46,61 @@ def insert_hours_data(horas: dict, hora_real) -> None:
         date_hora_final = ''
         for key in horas:
             hr = key[-2:]
-            date_hora_final = date_time_str+' '+hr+':00:00.000000'
-            if hr == 24: date_hora_final = data_today.strftime('%Y-%m-%d')+' 00:00:00.000000'
-            date_time_obj = datetime.strptime(date_hora_final, '%y-%m-%d %H:%M:%S')
+            date_hora_final = date_time_str+' '+hr+':00:00'
+            if hr == 24: date_hora_final = data_today.strftime('%Y-%m-%d')+' 00:00:00'
+            #date_time_obj = datetime.strptime(date_hora_final, '%Y-%m-%d %H:%M:%S')
             cont_scale = normalizar(contaminant,horas[key])
             try:
                 with engine.connect() as conn:
                     conn.execute(
                         'INSERT INTO air_quality_data VALUES(%s,%s,%s,%s,%s)',
-                        (date_time_obj,codi_eoi,contaminant,horas[key],cont_scale)
+                        (date_hora_final,codi_eoi,contaminant,horas[key],cont_scale)
                     )
-            except:
-                print("insercion de horas va mal")
+            except Exception as err:
+                with engine.connect() as conn:
+                    res = conn.execute(
+                        'SELECT * FROM air_quality_data WHERE date_hour = %s and station_eoi_code = %s and pollutant_composition = %s;',
+                        (date_hora_final,codi_eoi,contaminant)
+                    ).fetchall()
+                print(res)
+                print("Falla inserir medida")
+                print(err)
+                exit()
             
 
 if __name__ == '__main__':
-
-    url_aux1='https://analisi.transparenciacatalunya.cat/resource/tasf-thgu.json?data='
-    url_aux2='&nom_estacio=Gavà&$order=codi_eoi'
-    url = url_aux1+str(data_anterior)+url_aux2
+    
+    url = f"https://analisi.transparenciacatalunya.cat/resource/tasf-thgu.json?data={data_anterior}&nom_estacio=Gavà&$order=codi_eoi"
 
     #llamada a la API que contiene datos sobre la contaminación del aire del dia
     response = requests.get(url)
     response_json = response.json()
 
+    contaminantes_json = [ j['contaminant'] for j in response_json ]
 
+    with engine.connect() as conn:
+        all_eoi_codes = conn.execute('SELECT eoi_code FROM air_quality_station').fetchall()
+    estaciones_vistas = set(map(lambda r: r[0], all_eoi_codes))
+
+    for medicion in response_json:
+        if medicion['codi_eoi'] not in estaciones_vistas:
+            # Insertar estación
+            insert_air_station (
+                medicion['codi_eoi'],
+                medicion['nom_estacio'],
+                station_type[medicion['tipus_estacio']].value,
+                urban_area[medicion['area_urbana']].value,
+                int(medicion['altitud']),
+                float(medicion['latitud']),
+                float(medicion['longitud'])
+            )
+            estaciones_vistas.add(medicion['codi_eoi'])
+        
+        # Insertar medición
+
+
+    print(contaminantes_json)
+    exit()
 
     primero1 = 1
     primero2 = 1
@@ -87,8 +110,8 @@ if __name__ == '__main__':
     for d in response_json:
 
         codi_actual = d['codi_eoi']
-        if primero:
-            primero = 0
+        if primero1:
+            primero1 = 0
             codi_previ = codi_actual
             codi_eoi = codi_actual
 
@@ -100,8 +123,8 @@ if __name__ == '__main__':
             else:
                 if key == 'nom_estacio': nom_estacio = d[key]
                 elif key == 'unitats': unitats = d[key]
-                elif key == 'tipus_estacio': tipus_estacio = station_type[d[key]]
-                elif key == 'area_urbana': area_urbana = urban_area[d[key]]
+                elif key == 'tipus_estacio': tipus_estacio = station_type[d[key]].value
+                elif key == 'area_urbana': area_urbana = urban_area[d[key]].value
                 elif key == 'magnitud': magnitud = d[key]
                 elif key == 'contaminant': contaminant = d[key]
                 elif key == 'altitud': altitud = int(d[key])

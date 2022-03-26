@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 12da4ced494c
+Revision ID: ba81fee5f23d
 Revises: 
-Create Date: 2022-03-26 12:01:58.644200
+Create Date: 2022-03-26 18:06:10.303844
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '12da4ced494c'
+revision = 'ba81fee5f23d'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -22,8 +22,8 @@ def upgrade():
     sa.Column('name', sa.String(), nullable=True),
     sa.Column('eoi_code', sa.String(), nullable=False),
     sa.Column('station_type', sa.Enum('traffic', 'background', 'industrial', name='station_type'), nullable=True),
-    sa.Column('urbanArea', sa.Enum('urban', 'periurban', 'rural', name='urban_area'), nullable=True),
-    sa.Column('height', sa.Integer(), nullable=True),
+    sa.Column('urban_area', sa.Enum('urban', 'periurban', 'suburban', 'rural', name='urban_area'), nullable=True),
+    sa.Column('altitude', sa.Integer(), nullable=True),
     sa.Column('latitude', sa.Float(), nullable=True),
     sa.Column('longitude', sa.Float(), nullable=True),
     sa.Column('air_condition_scale', sa.Float(), nullable=True),

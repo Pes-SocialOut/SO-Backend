@@ -1,8 +1,6 @@
 import os
 from sqlalchemy import create_engine
 
-# Import pickle library to save python objects to file
-import pickle as pkl
 
 #FIXME: Change MIGRATIONS_ to URI in production. Now it is needed for testing from console.
 engine = create_engine(os.getenv("MIGRATIONS_SQLALCHEMY_DATABASE_URI"))
@@ -44,5 +42,6 @@ def insert_pollutant_data(contaminantes: dict) -> None:
                 (compos, lower, upper, unidades, peso)
             )
 
-
+if __name__ == '__main__':
+    insert_pollutant_data(contaminantes)
 

@@ -2,14 +2,15 @@ from app import db
 import enum
 
 class station_type(enum.Enum):
-    traffic = "Traffic"
-    background = "Background"
-    industrial = "Industrial"
+    traffic = "traffic"
+    background = "background"
+    industrial = "industrial"
 
 class urban_area(enum.Enum):
-    urban = "Urban"
-    periurban = "Peri-Urban"
-    rural = "Rural"
+    urban = "urban"
+    periurban = "peri-urban"
+    suburban = "suburban"
+    rural = "rural"
 
 class air_quality_station(db.Model):
     __tablename__ = 'air_quality_station'
@@ -18,20 +19,19 @@ class air_quality_station(db.Model):
     eoi_code = db.Column(db.String, primary_key=True)
     station_type = db.Column(db.Enum(station_type))
     urban_area = db.Column(db.Enum(urban_area))
-    height = db.Column(db.Integer)
+    altitude = db.Column(db.Integer)
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
     air_condition_scale = db.Column(db.Float)
     time_computation_scale = db.Column(db.DateTime)
-    #Ubicacion = db.Column(db.Integer, db.ForeignKey("Identificador")) 
 
-    def __init__(self, name, eoi_code, station_type, urban_area, height, latitude, longitude, air_condition_scale, time_computation_scale):
+    def __init__(self, name, eoi_code, station_type, urban_area, altitude, latitude, longitude, air_condition_scale, time_computation_scale):
         
         self.name = name
         self.eoi_code = eoi_code
         self.station_type = station_type
         self.urban_area = urban_area
-        self.height = height
+        self.altitude = altitude
         self.latitude = latitude
         self.longitude = longitude
         self.air_condition_scale = air_condition_scale
@@ -50,7 +50,7 @@ class air_quality_station(db.Model):
         db.session.commit()
 
     def __repr__(self):
-        return "".format(self.name, self.eoi_code, self.station_type, self.urban_area, self.height, self.longitude, self.latitude, self.air_condition_scale, self.time_computation_scale)
+        return "".format(self.name, self.eoi_code, self.station_type, self.urban_area, self.altitude, self.longitude, self.latitude, self.air_condition_scale, self.time_computation_scale)
 
     def toJSON(self):
         return {
@@ -58,7 +58,7 @@ class air_quality_station(db.Model):
             'name': self.name,
             'station_type': self.station_type.value,
             'urban_area': self.urban_area.value,
-            'altitude': self.height,
+            'altitude': self.altitude,
             'longitude': self.longitude,
             'latitude': self.latitude,
             'pollution': self.air_condition_scale,
