@@ -5,7 +5,7 @@ from flask import Blueprint, jsonify, request #, render_template, flash, g, sess
 from app import db
 
 # Import module models
-from app.module_airservice.models import date_hour, air_quality_station, air_quality_data, pollutant
+from app.module_airservice.models import air_quality_station, air_quality_data, pollutant
 
 # Define the blueprint: 'air', set its url prefix: app.url/air
 module_airservice = Blueprint('air', __name__, url_prefix='/air')
@@ -65,11 +65,15 @@ def general_quality_at_a_point():
     w0, w1, w2 = baricentric_interpolation(s0[1], s0[2], s1[1], s1[2], s2[1], s2[2], long, lat)
     general_quality = w0*s0[3] + w1*s1[3] + w2*s2[3]
 
-    js0 = {'id': s0[0], 'long': s0[1], 'lat': s0[2], 'quality': s0[3]}
-    js1 = {'id': s1[0], 'long': s1[1], 'lat': s1[2], 'quality': s1[3]}
-    js2 = {'id': s2[0], 'long': s2[1], 'lat': s2[2], 'quality': s2[3]}
+    json_stations = []
+    if s0[0] != None:
+        json_stations.append({'id': s0[0], 'long': s0[1], 'lat': s0[2], 'pollution': s0[3]})
+    if s1[0] != None:
+        json_stations.append({'id': s1[0], 'long': s1[1], 'lat': s1[2], 'pollution': s1[3]})
+    if s2[0] != None:
+        json_stations.append({'id': s2[0], 'long': s2[1], 'lat': s2[2], 'pollution': s2[3]})
 
-    response = jsonify({'quality': general_quality, 'surrounding_quality_stations': [js0, js1, js2]})
+    response = jsonify({'pollution': general_quality, 'surrounding_measuring_stations': json_stations})
     response.status_code = 200
     return response
 

@@ -1,29 +1,6 @@
 from app import db
+import enum
 
-class date_hour(db.Model):
-    __tablename__ = 'date_hour'
-    date_hour =db.Column(db.DateTime, default=db.func.current_timestamp() , primary_key=True)
-    
-
-    def __init__(self, date_hour):
-        self.date_hour = date_hour
-
-    def save(self):
-        db.session.add(self)
-        db.session.commit()
-
-    @staticmethod
-    def get_all():
-        return date_hour.query.all()
-
-    def delete(self):
-        db.session.delete(self)
-        db.session.commit()
-
-    def __repr__(self):
-        return "".format(self.date_hour)
-
-import enum 
 class station_type(enum.Enum):
     traffic = "Traffic"
     background = "Background"
@@ -33,7 +10,6 @@ class urban_area(enum.Enum):
     urban = "Urban"
     periurban = "Peri-Urban"
     rural = "Rural"
-
 
 class air_quality_station(db.Model):
     __tablename__ = 'air_quality_station'
@@ -60,8 +36,6 @@ class air_quality_station(db.Model):
         self.lenght = lenght
         self.air_condition_scale = air_condition_scale
         self.time_computation_scale = time_computation_scale
-
-
 
     def save(self):
         db.session.add(self)
@@ -94,8 +68,6 @@ class pollutant(db.Model):
         self.units = units
         self.air_quality_weight = air_quality_weight
 
-
-
     def save(self):
         db.session.add(self)
         db.session.commit()
@@ -111,12 +83,10 @@ class pollutant(db.Model):
     def __repr__(self):
         return "".format(self.composition, self.common_lowerbound, self.common_upperbound, self.units, self.air_quality_weight)
 
-
-
 class air_quality_data(db.Model):
     __tablename__ = 'air_quality_data'
 
-    date_hour = db.Column(db.DateTime, db.ForeignKey(date_hour.date_hour), primary_key=True)
+    date_hour = db.Column(db.DateTime, primary_key=True)
     station_eoi_code = db.Column(db.String, db.ForeignKey(air_quality_station.eoi_code), primary_key=True)
     pollutant_composition = db.Column(db.String, db.ForeignKey(pollutant.composition), primary_key=True)
     value = db.Column(db.Float)
@@ -129,7 +99,6 @@ class air_quality_data(db.Model):
         self.pollutant_composition = pollutant_composition
         self.value = value
         self.contaminant_scale = contaminant_scale
-
 
     def save(self):
         db.session.add(self)
@@ -145,7 +114,4 @@ class air_quality_data(db.Model):
 
     def __repr__(self):
         return "".format(self.date_hour, self.station_eoi_code, self.pollutant_composition, self.value, self.contaminant_scale)
-
-
-
 
