@@ -10,26 +10,54 @@ from app.module_airservice.models import air_quality_station, air_quality_data, 
 # Define the blueprint: 'air', set its url prefix: app.url/air
 module_airservice = Blueprint('air', __name__, url_prefix='/air')
 
+# Import time libraries
+from datetime import datetime, timedelta
+
 # Import pickle library to save python objects to file
 import pickle as pkl
 import os
 triangulation_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'triangulation.pkl')
 
-# Set the route and accepted methods
+
 @module_airservice.route('/station/<id>', methods=['GET'])
 def air_station_readings(id):
-    #queryresult = pollutant.query.filter_by(composition=id).all()
+    qtime = get_date_time_query_string()
+    query_result = db.session.query(air_quality_station, air_quality_data) \
+        .outerjoin(air_quality_data, air_quality_station.eoi_code == air_quality_data.station_eoi_code) \
+        .filter(air_quality_station.eoi_code == id) \
+        .filter(air_quality_data.date_hour == qtime).all()
 
- 
-    obj = {
-        'composition': "NO2",
-        'common_lowerbound': 5.0,
-        'common_upperbound': 12.0,
-        'units': "m^3x2"
-    }
-    response = jsonify(obj)
-    response.status_code = 200
-    return response
+    if len(query_result) == 0:
+        query_result = air_quality_station.query.filter_by(eoi_code = id).first()
+        if query_result == None:
+            return jsonify({"message":f"Station with eoi_code {id} is not registered"}), 404
+        st = query_result.toJSON()
+        st['pollutants'] = []
+        return jsonify(st), 200
+    
+    response = query_result[0][0].toJSON()
+    response['pollutants'] = []
+    for _, measure in query_result:
+        ms = measure.toJSON()
+        del ms['date_hour']
+        del ms['station_eoi_code']
+        response['pollutants'].append(ms)
+    
+    return jsonify(response), 200
+
+def get_date_time_query_string():
+    yd = datetime.now() - timedelta(days = 1)
+    if yd.minute > 30:
+        yd += timedelta(hours = 1)
+    return f'{yd.year}-{yd.month}-{yd.day} {yd.hour}:00:00'
+
+
+@module_airservice.route('/station/', methods=['GET'])
+def get_all_air_stations_id_name_location_pollution():
+    query_result = air_quality_station.query.all()
+    response = list(map(lambda s: {'id': s.eoi_code, 'name':s.name, 'long': s.longitude, 'lat': s.latitude, 'pollution': s.air_condition_scale}, query_result))
+    return jsonify(response), 200
+
 
 @module_airservice.route('/location/', methods=['GET'])
 def general_quality_at_a_point():

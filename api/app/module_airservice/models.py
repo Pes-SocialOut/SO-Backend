@@ -17,7 +17,7 @@ class air_quality_station(db.Model):
     name = db.Column(db.String)
     eoi_code = db.Column(db.String, primary_key=True)
     station_type = db.Column(db.Enum(station_type))
-    urbanArea = db.Column(db.Enum(urban_area))
+    urban_area = db.Column(db.Enum(urban_area))
     height = db.Column(db.Integer)
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
@@ -25,7 +25,7 @@ class air_quality_station(db.Model):
     time_computation_scale = db.Column(db.DateTime)
     #Ubicacion = db.Column(db.Integer, db.ForeignKey("Identificador")) 
 
-    def __init__(self, name, eoi_code, station_type, urban_area, height, latitude, lenght, air_condition_scale, time_computation_scale):
+    def __init__(self, name, eoi_code, station_type, urban_area, height, latitude, longitude, air_condition_scale, time_computation_scale):
         
         self.name = name
         self.eoi_code = eoi_code
@@ -33,7 +33,7 @@ class air_quality_station(db.Model):
         self.urban_area = urban_area
         self.height = height
         self.latitude = latitude
-        self.lenght = lenght
+        self.longitude = longitude
         self.air_condition_scale = air_condition_scale
         self.time_computation_scale = time_computation_scale
 
@@ -50,7 +50,20 @@ class air_quality_station(db.Model):
         db.session.commit()
 
     def __repr__(self):
-        return "".format(self.name, self.eoi_code, self.station_type, self.urban_area, self.height, self.latitude, self.lenght, self.air_condition_scale, self.time_computation_scale)
+        return "".format(self.name, self.eoi_code, self.station_type, self.urban_area, self.height, self.longitude, self.latitude, self.air_condition_scale, self.time_computation_scale)
+
+    def toJSON(self):
+        return {
+            'eoi_code': self.eoi_code,
+            'name': self.name,
+            'station_type': self.station_type.value,
+            'urban_area': self.urban_area.value,
+            'altitude': self.height,
+            'longitude': self.longitude,
+            'latitude': self.latitude,
+            'pollution': self.air_condition_scale,
+            'last_calculated_at': self.time_computation_scale
+        }
 
 class pollutant(db.Model):
     __tablename__ = 'pollutant'
@@ -115,3 +128,11 @@ class air_quality_data(db.Model):
     def __repr__(self):
         return "".format(self.date_hour, self.station_eoi_code, self.pollutant_composition, self.value, self.contaminant_scale)
 
+    def toJSON(self):
+        return {
+            'date_hour': self.date_hour,
+            'station_eoi_code': self.station_eoi_code,
+            'pollutant_composition': self.pollutant_composition,
+            'value': self.value,
+            'contaminant_scale': self.contaminant_scale
+        }
