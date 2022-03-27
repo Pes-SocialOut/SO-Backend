@@ -1,11 +1,13 @@
 # Import flask dependencies
 # Import module models (i.e. User)
+from re import M
 from app.module_event.models import Event
 from datetime import date, datetime
 from sqlalchemy.dialects.postgresql import UUID
 from flask import (Blueprint, flash, g, redirect, render_template, request,
                    session, url_for, jsonify)
 import uuid
+import json
 
 # Import the database object from the main app module
 from app import db
@@ -13,50 +15,68 @@ from app import db
 # Define the blueprint: 'event', set its url prefix: app.url/event
 module_event = Blueprint('event', __name__, url_prefix='/events')
 
+# Min y Max longitud and latitude of Catalunya from resource https://www.idescat.cat/pub/?id=aec&n=200&t=2019
+min_longitud_catalunya = 0.15
+min_latitude_catalunya = 40.51667
+max_longitud_catalunya = 3.316667
+max_latitude_catalunya = 42.85
+
 # Set the route and accepted methods
 
 # POST method: creates an event in the database
 @module_event.route('', methods=['POST'])
 def create_event():
     args = request.args
+    event_uuid = uuid.uuid4()
 
-    # restriction 1: check for vulgar words in description and name
+    # TODO restriction 1: check for vulgar words in description and name
 
     # restriction 2: String attributes aren't empty    
-    if len(args.get("id")) == 0 | len(args.get("name")) == 0 | len(args.get("description")) == 0 | len(args.get("userCreator")) == 0:
-        return "An attribute is empty!", 400
+    if len(args.get("name")) == 0 | len(args.get("description")) == 0 | len(args.get("user_creator")) == 0:
+        return jsonify({"error_message": "An attribute is empty!"}), 400
     
     # restriction 3: date started is older than end date of the event
-    dateStarted = datetime.strptime(args.get("dateStarted"), '%Y-%m-%d %H:%M:%S.%f')
-    dateEnd= datetime.strptime(args.get("dateEnd"), '%Y-%m-%d %H:%M:%S.%f')
+    date_started = datetime.strptime(args.get("date_started"), '%Y-%m-%d %H:%M:%S')
+    date_end= datetime.strptime(args.get("date_end"), '%Y-%m-%d %H:%M:%S')
     #'2015-06-05 10:20:10.000'
-    
-    if dateStarted > dateEnd:
-        return "date Started is bigger than date End, that's not possible!", 400
+    if date_started > date_end:
+        return jsonify({"error_message": "date Started is bigger than date End, that's not possible!"}), 400
     
     # restriction 4: longitud and latitude in Catalunya
-
-    # restriction 5: date started should be right now or in the future
-
-    #STUCK HERE WITH THE DATES! I NEED TO GET THE DATESTARTED AND DATEEND AND DO COMPARISONS WITH THEM IN DATETIME FORMAT
-    now = datetime.today
-    if dateStarted < now:
-        return "date Started earlier than right now, it already started?", 400
+    longitud = float(args.get("longitud"))
+    latitude = float(args.get("latitude"))
+    if max_longitud_catalunya < longitud or longitud < min_longitud_catalunya or max_latitude_catalunya < latitude or latitude < min_latitude_catalunya:
+        return jsonify({"error_message": "location given by longitud and latitude are outside of Catalunya"}), 400
+    
+    # restriction 5: date started should be right now or in the future    
+    if date_started < datetime.now():
+        return jsonify({"error_message": "date Started earlier than right now, it already started?"}), 400
 
     # restriction 6: description attribute is longer than 250 characters
     if len(args.get("description")) > 250:
-        return "Description is too long!", 400
+        return jsonify({"error_message": "Description is too long!"}), 400
     
     # restriction 7: name attribute is longer than 25 characters
     if len(args.get("name")) > 25:
-        return "Name is too long!", 400
+        return jsonify({"error_message": "Name is too long!"}), 400
     
+    # TODO restriction 8: max participants is bigger than MAX_PARTICIPANTS_NORMAL_EVENT
+
     
-    event = Event(uuid.UUID(args.get("id")), args.get("name"), args.get("description"), args.get("dateCreated"), args.get("dateEnd"), uuid.UUID(args.get("userCreator")), args.get("longitud"), args.get("latitude"))
+    event = Event(event_uuid, args.get("name"), args.get("description"), date_started, date_end, uuid.UUID(args.get("user_creator")), longitud, latitude, args.get("max_participants", type=int))
     db.session.add(event)
-    db.session.commit()
     
-    return jsonify({'event': event}), 201
+    # TODO Encontrar errores de base de datos como null value, usuario no existe, etc.
+    try:
+        db.session.commit()
+    except:
+        return jsonify({"error_message": "DO THIS"})
+    
+    eventJSON = event.toJSON()
+
+    return jsonify(eventJSON), 201
+
+
 
 # GET method: returns the information of one event
 @module_event.route('', methods=['GET'])

@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import pytest
+from app.module_event.controllers import create_event
+
 
 class TestCreateEventSuite:
-    
+        
     @classmethod
     def setup_class(cls):
         # Hacer lo comun que no hace falta reiniciar tras cada test. Se ejecuta una vez antes de empezar ningun test.
