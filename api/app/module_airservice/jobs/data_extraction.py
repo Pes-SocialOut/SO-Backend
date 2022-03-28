@@ -2,7 +2,6 @@ from urllib import response
 from datetime import datetime
 from datetime import timedelta
 import requests
-import json
 import os
 
 from app.module_airservice.jobs.pollutants import contaminantes

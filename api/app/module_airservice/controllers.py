@@ -90,7 +90,7 @@ def general_quality_at_a_point():
     s0 = air_data[triangle[0]]
     s1 = air_data[triangle[1]]
     s2 = air_data[triangle[2]]
-    w0, w1, w2 = baricentric_interpolation(s0[1], s0[2], s1[1], s1[2], s2[1], s2[2], long, lat)
+    w0, w1, w2 = barycentric_interpolation(s0[1], s0[2], s1[1], s1[2], s2[1], s2[2], long, lat)
     general_quality = w0*s0[3] + w1*s1[3] + w2*s2[3]
 
     json_stations = []
@@ -105,7 +105,7 @@ def general_quality_at_a_point():
     response.status_code = 200
     return response
 
-def baricentric_interpolation(x1, y1, x2, y2, x3, y3, xp, yp):
+def barycentric_interpolation(x1, y1, x2, y2, x3, y3, xp, yp):
     w0 = ((y2-y3)*(xp-x3)+(x3-x2)*(yp-y3))/((y2-y3)*(x1-x3)+(x3-x2)*(y1-y3))
     w1 = ((y3-y1)*(xp-x3)+(x1-x3)*(yp-y3))/((y2-y3)*(x1-x3)+(x3-x2)*(y1-y3))
     return w0, w1, 1-w0-w1
