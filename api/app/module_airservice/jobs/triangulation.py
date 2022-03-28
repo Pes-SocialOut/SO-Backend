@@ -78,19 +78,24 @@ def calculate_weighted_means_at_bounds(air_data: list, triangles: list) -> list:
         adjacencies = list(filter(lambda x: x > 4, adjacencies))
         if len(adjacencies) == 0:
             continue
-        # Assign a weighted quality guided by the distance to each neighbor
-        v_lng = air_data[bnd_vtx][1]
-        v_lat = air_data[bnd_vtx][2]
-        distance = lambda lng, lat: math.sqrt((lng-v_lng)*(lng-v_lng) + (lat-v_lat)*(lat-v_lat))
-        adj_distances = [distance(air_data[a][1], air_data[a][2]) for a in adjacencies]
-        adj_weights = [1/dist for dist in adj_distances]
-        adj_qualities = [air_data[a][3] for a in adjacencies]
-        weighted_qualities = [adj_qualities[i]*adj_weights[i] for i in range(len(adjacencies))]
-        v_quality = sum(weighted_qualities)/sum(adj_weights)
-
-        air_data[bnd_vtx] = (None, v_lng, v_lat, v_quality)
+        quality = distance_based_weighted_mean(air_data, bnd_vtx, adjacencies)
+        air_data[bnd_vtx] = (None, air_data[bnd_vtx][1], air_data[bnd_vtx][2], quality)
 
     return air_data
+
+def distance_based_weighted_mean(data: list, vtx: int, adj: list) -> float:
+    if len(adj) == 0:
+        return
+    # Assign a weighted quality guided by the distance to each neighbor
+    v_lng = data[vtx][1]
+    v_lat = data[vtx][2]
+    distance = lambda lng, lat: math.sqrt((lng-v_lng)*(lng-v_lng) + (lat-v_lat)*(lat-v_lat))
+    adj_distances = [distance(data[a][1], data[a][2]) for a in adj]
+    adj_weights = [1/dist for dist in adj_distances]
+    adj_qualities = [data[a][3] for a in adj]
+    weighted_qualities = [adj_qualities[i]*adj_weights[i] for i in range(len(adj))]
+    return sum(weighted_qualities)/sum(adj_weights)
+
 
 def save_current_triangulation(triangulation, air_data) -> None:
     with open(triangulation_file_path, 'wb') as out:
