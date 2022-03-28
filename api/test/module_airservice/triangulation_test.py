@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import pytest
 from app.module_airservice.jobs.triangulation import distance_based_weighted_mean
 from app.module_airservice.controllers import barycentric_interpolation
 

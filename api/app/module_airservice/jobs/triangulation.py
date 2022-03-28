@@ -12,12 +12,8 @@ from datetime import datetime, timedelta
 # Import pickle library to save python objects to file
 import pickle as pkl
 
-triangulation_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','triangulation.pkl')
 
-#FIXME: Change MIGRATIONS_ to URI in production. Now it is needed for testing from console.
-engine = create_engine(os.getenv("MIGRATIONS_SQLALCHEMY_DATABASE_URI"))
-
-def fetch_air_data() -> list:
+def fetch_air_data(engine) -> list:
     yesterday = datetime.now() - timedelta(days = 1)
     if yesterday.minute > 30:
         yesterday += timedelta(hours = 1)
@@ -39,7 +35,7 @@ def fetch_air_data() -> list:
 
     return air_data
 
-def update_station_general_quality(air_data: list) -> None:
+def update_station_general_quality(air_data: list, engine) -> None:
     upd_time = datetime.now()
     for entry in air_data:
         eoi_code = entry[0]
@@ -97,7 +93,7 @@ def distance_based_weighted_mean(data: list, vtx: int, adj: list) -> float:
     return sum(weighted_qualities)/sum(adj_weights)
 
 
-def save_current_triangulation(triangulation, air_data) -> None:
+def save_current_triangulation(triangulation, air_data, triangulation_file_path) -> None:
     with open(triangulation_file_path, 'wb') as out:
         pkl.dump({'tri':triangulation, 'air': air_data}, out, pkl.HIGHEST_PROTOCOL)
 
@@ -108,9 +104,14 @@ def generate_heat_map() -> None:
     #  as color values of vertices
 
 if __name__ == '__main__':
-    air_data = fetch_air_data()
-    update_station_general_quality(air_data)
+    triangulation_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','triangulation.pkl')
+
+    #FIXME: Change MIGRATIONS_ to URI in production. Now it is needed for testing from console.
+    engine = create_engine(os.getenv("MIGRATIONS_SQLALCHEMY_DATABASE_URI"))
+
+    air_data = fetch_air_data(engine)
+    update_station_general_quality(air_data, engine)
     air_data = add_map_bounding_vertices(air_data)
     triangulation = triangulate(air_data)
     air_data = calculate_weighted_means_at_bounds(air_data, triangulation.triangles)
-    save_current_triangulation(triangulation, air_data)
+    save_current_triangulation(triangulation, air_data, triangulation_file_path)
