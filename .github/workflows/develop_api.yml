@@ -30,6 +30,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install flake8 pytest
           pip install -r api/requirements.txt
+          echo "PYTHONPATH=mlprepare" >> $GITHUB_ENV
       - name: Analize static code with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
