@@ -1,1 +1,9 @@
-__pycache__/
+#Ignore the env (python virtual enviornment) directory
+env/
+*/__pycache__/
+testEnv.sh
+testEnvWin.ps1
+.env
+Dockerfile
+docker-entrypoint.sh
+docker-compose.yml
