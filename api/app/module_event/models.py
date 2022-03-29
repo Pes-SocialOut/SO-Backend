@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql import UUID
 import uuid
 
 
-# Define a User model
+# Define an Event model
 class Event(db.Model):
 
     __tablename__ = 'events'
@@ -29,7 +29,7 @@ class Event(db.Model):
     # Number of max participants of the event
     max_participants = db.Column(db.Integer, nullable=False)
 
-    # New instance instantiation procedure
+    # To CREATE an instance of an Event
     def __init__(self, id, name, description, date_started, date_end, user_creator, longitud, latitude, max_participants):
 
         self.id = id
@@ -42,10 +42,26 @@ class Event(db.Model):
         self.latitude = latitude
         self.max_participants = max_participants
 
+    # To FORMAT an Event in a readable string format 
     def __repr__(self):
-        return '<Event %r>' % (self.name)
+        return 'Event(id: ' + str(self.id) + ', name: ' + str(self.name) + ', description: ' + str(self.description) + ', date_started: ' + str(self.date_started) + ', date_end: ' + str(self.date_end) + ', user_creator: ' + str(self.user_creator) + ', longitud: ' + str(self.longitud) + ', latitude: ' + str(self.latitude) + ', max_participants: ' + str(self.max_participants) + ').'
 
+    # To DELETE a row from the table
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+    
+    # To SAVE a row from the table
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
 
+    @staticmethod
+    # To GET ALL ROWS of the table
+    def get_all():
+        return Event.query.all()
+
+    # To CONVERT an Event object to a dictionary
     def toJSON(self):
         eventJSON = {
             "id": self.id,
