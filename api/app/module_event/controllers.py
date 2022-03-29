@@ -2,15 +2,13 @@
 # Import module models (i.e. User)
 from app.module_event.models import Event
 from datetime import datetime
-from sqlalchemy.dialects.postgresql import UUID
-from flask import (Blueprint, flash, g, redirect, render_template, request,
-                   session, url_for, jsonify)
+from flask import (Blueprint, request, jsonify)
 import uuid
 # Import the database object from the main app module
 from app import db
 
 # Define the blueprint: 'event', set its url prefix: app.url/event
-module_event = Blueprint('event', __name__, url_prefix='/events')
+module_event_v1 = Blueprint('event', __name__, url_prefix='/v1/events')
 
 # Min y Max longitud and latitude of Catalunya from resource https://www.idescat.cat/pub/?id=aec&n=200&t=2019
 min_longitud_catalunya = 0.15
@@ -22,7 +20,7 @@ max_latitude_catalunya = 42.85
 # Set the route and accepted methods
 
 # POST method: creates an event in the database
-@module_event.route('', methods=['POST'])
+@module_event_v1.route('/', methods=['POST'])
 # RECEIVING:
 # - POST HTTP request with the parameters {name, description, date_started, date_end, user_creator, longitud, latitude, max_participants}
 #       in a JSON object in the body of the request
@@ -118,13 +116,10 @@ def create_event():
 
 
 # GET method: returns the information of one event
-@module_event.route('', methods=['GET'])
-def get_event():
-
-    args = request.json
-
+@module_event_v1.route('/<id>', methods=['GET'])
+def get_event(id):
     try:
-        user_id = uuid.UUID(args.get("id"))
+        user_id = uuid.UUID(id)
     except:
         return jsonify({"error_message": "user_id isn't a valid UUID"}), 400
 
@@ -135,13 +130,10 @@ def get_event():
         return jsonify({"error_message": "El evento no existe"}), 400
 
 # DELETE method: deletes an event from the database
-@module_event.route('', methods=['DELETE'])
-def delete_event():
-
-    args= request.json
-
+@module_event_v1.route('/<id>', methods=['DELETE'])
+def delete_event(id):
     try:
-        user_id = uuid.UUID(args.get("id"))
+        user_id = uuid.UUID(id)
     except :
         return jsonify({"error_message": "user_id isn't a valid UUID"}), 400
 
@@ -153,20 +145,20 @@ def delete_event():
         return jsonify({"error_message": "El evento no existe"}), 400
 
 # GET ALL method: returns the information of all the events of the database
-@module_event.route('/', methods=['GET'])
+@module_event_v1.route('/', methods=['GET'])
 def get_all_events():
     try:
         all_events = Event.get_all()
-        return all_events.toJSON()
-    except:
-        return jsonify({"error_message": "Ha habido un error"}), 400
+        return jsonify([event.toJSON() for event in all_events])
+    except Exception as e:
+        return jsonify({"error_message": e}), 400
 
 # PUT method: Modifies the information of a specific event of the database
-@module_event.route('', methods=['PUT'])
+@module_event_v1.route('/', methods=['PUT'])
 def modify_events():
     return "Always successful PUT", 200
 
 # If the event doesn't exist
-@module_event.errorhandler(404)
-def page_not_found(e):
+@module_event_v1.errorhandler(404)
+def page_not_found():
     return "<h1>404</h1><p>The event could not be found.</p>", 404

@@ -105,9 +105,8 @@ def generate_heat_map() -> None:
 
 if __name__ == '__main__':
     triangulation_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','triangulation.pkl')
-
-    #FIXME: Change MIGRATIONS_ to URI in production. Now it is needed for testing from console.
-    engine = create_engine(os.getenv("MIGRATIONS_SQLALCHEMY_DATABASE_URI"))
+    
+    engine = create_engine(os.getenv("SQLALCHEMY_DATABASE_URI"))
 
     air_data = fetch_air_data(engine)
     update_station_general_quality(air_data, engine)
