@@ -120,9 +120,16 @@ def create_event():
 # GET method: returns the information of one event
 @module_event.route('', methods=['GET'])
 def get_event():
-    args = request.args
+
+    args = request.json
+
     try:
-        event = Event.query.filter_by(id = args.get("id", type = uuid.uuid4)).first()
+        user_id = uuid.UUID(args.get("id"))
+    except:
+        return jsonify({"error_message": "user_id isn't a valid UUID"}), 400
+
+    try:
+        event = Event.query.filter_by(id = user_id)
         return event.toJSON()
     except:
         return jsonify({"error_message": "El evento no existe"}), 400
@@ -130,13 +137,19 @@ def get_event():
 # DELETE method: deletes an event from the database
 @module_event.route('', methods=['DELETE'])
 def delete_event():
-    args= request.args
+
+    args= request.json
+
     try:
-        eventb = Event.query.filter_by(id = args.get("id" , type = uuid.uuid4)).first()
-        db.session.delete(eventb)
-        db.session.commit()
+        user_id = uuid.UUID(args.get("id"))
+    except :
+        return jsonify({"error_message": "user_id isn't a valid UUID"}), 400
+
+    try:
+        eventb = Event.query.filter_by(id = user_id)
+        eventb.delete()
         return jsonify({"message": "Successful DELETE"}), 200
-    except:
+    except :
         return jsonify({"error_message": "El evento no existe"}), 400
 
 # GET ALL method: returns the information of all the events of the database
