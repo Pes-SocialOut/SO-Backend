@@ -1,2 +1,3 @@
 #Ignore the env (python virtual enviornment) directory
 env/
+*/__pycache__
