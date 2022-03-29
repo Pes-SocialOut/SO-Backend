@@ -120,17 +120,33 @@ def create_event():
 # GET method: returns the information of one event
 @module_event.route('', methods=['GET'])
 def get_event():
-    return "Always successful GET", 200
+    args = request.args
+    try:
+        event = Event.query.filter_by(id = args.get("id", type = uuid.uuid4)).first()
+        return event.toJSON()
+    except:
+        return jsonify({"error_message": "El evento no existe"}), 400
 
 # DELETE method: deletes an event from the database
 @module_event.route('', methods=['DELETE'])
 def delete_event():
-    return "Always successful DELETE", 200
+    args= request.args
+    try:
+        eventb = Event.query.filter_by(id = args.get("id" , type = uuid.uuid4)).first()
+        db.session.delete(eventb)
+        db.session.commit()
+        return jsonify({"message": "Successful DELETE"}), 200
+    except:
+        return jsonify({"error_message": "El evento no existe"}), 400
 
 # GET ALL method: returns the information of all the events of the database
 @module_event.route('/', methods=['GET'])
 def get_all_events():
-    return "Always successful GET ALL", 200
+    try:
+        all_events = Event.get_all()
+        return all_events.toJSON()
+    except:
+        return jsonify({"error_message": "Ha habido un error"}), 400
 
 # PUT method: Modifies the information of a specific event of the database
 @module_event.route('', methods=['PUT'])
