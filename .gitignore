@@ -1,3 +1,6 @@
 #Ignore the env (python virtual enviornment) directory
 env/
 */__pycache__/
+testEnv.sh
+testEnvWin.ps1
+.env
