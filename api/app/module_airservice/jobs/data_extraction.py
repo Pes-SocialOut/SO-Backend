@@ -9,8 +9,7 @@ from sqlalchemy import create_engine
 
 from app.module_airservice.models import station_type, urban_area
 
-#FIXME: Change MIGRATIONS_ to URI in production. Now it is needed for testing from console.
-engine = create_engine(os.getenv("MIGRATIONS_SQLALCHEMY_DATABASE_URI"))
+engine = create_engine(os.getenv("SQLALCHEMY_DATABASE_URI"))
 
 hours = ['h01','h02','h03','h04','h05','h06',
          'h07','h08','h09','h10','h11','h12',

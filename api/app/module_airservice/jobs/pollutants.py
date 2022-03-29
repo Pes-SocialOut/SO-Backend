@@ -1,10 +1,7 @@
 import os
 from sqlalchemy import create_engine
 
-
-#FIXME: Change MIGRATIONS_ to URI in production. Now it is needed for testing from console.
-engine = create_engine(os.getenv("MIGRATIONS_SQLALCHEMY_DATABASE_URI"))
-
+engine = create_engine(os.getenv("SQLALCHEMY_DATABASE_URI"))
 
 #Cada clave es el ID del contaminante
 #Sus valores [valor maxumo, peso]

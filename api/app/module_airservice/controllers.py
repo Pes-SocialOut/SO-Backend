@@ -7,8 +7,6 @@ from app import db
 # Import module models
 from app.module_airservice.models import air_quality_station, air_quality_data, pollutant
 
-# Define the blueprint: 'air', set its url prefix: app.url/air
-module_airservice = Blueprint('air', __name__, url_prefix='/air')
 
 # Import time libraries
 from datetime import datetime, timedelta
@@ -19,7 +17,10 @@ import os
 triangulation_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'triangulation.pkl')
 
 
-@module_airservice.route('/station/<id>', methods=['GET'])
+# Define the blueprint: 'air', set its url prefix: app.url/air
+module_airservice_v1 = Blueprint('air', __name__, url_prefix='/v1/air')
+
+@module_airservice_v1.route('/stations/<id>', methods=['GET'])
 def air_station_readings(id):
     qtime = get_date_time_query_string()
     query_result = db.session.query(air_quality_station, air_quality_data) \
@@ -30,7 +31,7 @@ def air_station_readings(id):
     if len(query_result) == 0:
         query_result = air_quality_station.query.filter_by(eoi_code = id).first()
         if query_result == None:
-            return jsonify({"message":f"Station with eoi_code {id} is not registered"}), 404
+            return jsonify({"error_message":f"Station with eoi_code {id} is not registered"}), 404
         st = query_result.toJSON()
         st['pollutants'] = []
         return jsonify(st), 200
@@ -52,41 +53,41 @@ def get_date_time_query_string():
     return f'{yd.year}-{yd.month}-{yd.day} {yd.hour}:00:00'
 
 
-@module_airservice.route('/station/', methods=['GET'])
+@module_airservice_v1.route('/stations/', methods=['GET'])
 def get_all_air_stations_id_name_location_pollution():
     query_result = air_quality_station.query.all()
-    response = list(map(lambda s: {'id': s.eoi_code, 'name':s.name, 'long': s.longitude, 'lat': s.latitude, 'pollution': s.air_condition_scale}, query_result))
+    response = [{'id': s.eoi_code, 'name':s.name, 'long': s.longitude, 'lat': s.latitude, 'pollution': s.air_condition_scale} for s in query_result]
     return jsonify(response), 200
 
 
-@module_airservice.route('/location/', methods=['GET'])
+@module_airservice_v1.route('/location/', methods=['GET'])
 def general_quality_at_a_point():
     if not (request.args.get('long') and request.args.get('lat')):
-        return jsonify({"message":"Must contain a point defined by query parameters <long> and <lat>"}), 400
+        return jsonify({"error_message":"Must contain a point defined by query parameters <long> and <lat>"}), 400
     
     try:
         long = float(request.args.get('long'))
         lat = float(request.args.get('lat'))
     except ValueError:
-        return jsonify({"message":"<long> and <lat> query parameters must be of type float"}), 400
+        return jsonify({"error_message":"<long> and <lat> query parameters must be of type float"}), 400
 
-    # TODO: Quizás leer el fichero cada vez es muy ineficiente, buscar alternativa.
+    # TODO: Quizas leer el fichero cada vez es muy ineficiente, buscar alternativa.
     try:
         with open(triangulation_file_path, 'rb') as inp:
             triangulation_data = pkl.load(inp)
     except FileNotFoundError:
-        return jsonify({"message":"Service depends on a file not currently available, try again later..."}), 404
+        return jsonify({"error_message":"Service depends on a file not currently available, try again later..."}), 404
 
-    # Find triangle
+    # Encontrar triangulo
     trifinder = triangulation_data['tri'].get_trifinder()
     triangle_id = trifinder(long, lat)
 
     if triangle_id == -1:
-        return jsonify({"message":"Point must be inside Catalunya's area"}), 400
+        return jsonify({"error_message":"Point must be inside Catalunya's area"}), 400
     
     triangle = triangulation_data['tri'].triangles[triangle_id]
     air_data = triangulation_data['air']
-    # Select stations
+    # Seleccionar estacion
     s0 = air_data[triangle[0]]
     s1 = air_data[triangle[1]]
     s2 = air_data[triangle[2]]
