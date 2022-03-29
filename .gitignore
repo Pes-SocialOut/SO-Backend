@@ -4,3 +4,6 @@ env/
 testEnv.sh
 testEnvWin.ps1
 .env
+Dockerfile
+docker-entrypoint.sh
+docker-compose.yml
