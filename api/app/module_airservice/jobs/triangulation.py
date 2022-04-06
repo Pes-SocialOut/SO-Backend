@@ -10,6 +10,7 @@ import math
 from datetime import datetime, timedelta
 
 # Import pickle library to save python objects to file
+import psycopg2
 import pickle as pkl
 
 
@@ -93,9 +94,11 @@ def distance_based_weighted_mean(data: list, vtx: int, adj: list) -> float:
     return sum(weighted_qualities)/sum(adj_weights)
 
 
-def save_current_triangulation(triangulation, air_data, triangulation_file_path) -> None:
-    with open(triangulation_file_path, 'wb') as out:
-        pkl.dump({'tri':triangulation, 'air': air_data}, out, pkl.HIGHEST_PROTOCOL)
+def save_current_triangulation(triangulation, air_data, engine) -> None:
+    data_bytes = pkl.dumps({'tri':triangulation, 'air': air_data}, pkl.HIGHEST_PROTOCOL)
+    with engine.connect() as conn:
+        conn.execute('DELETE FROM tri_cache')
+        conn.execute('INSERT INTO tri_cache values(%s, %s)', (datetime.now(), psycopg2.Binary(data_bytes)))
 
 def generate_heat_map() -> None:
     print("not implemented")
@@ -104,8 +107,6 @@ def generate_heat_map() -> None:
     #  as color values of vertices
 
 if __name__ == '__main__':
-    triangulation_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','triangulation.pkl')
-    
     engine = create_engine(os.getenv("SQLALCHEMY_DATABASE_URI"))
 
     air_data = fetch_air_data(engine)
@@ -113,4 +114,4 @@ if __name__ == '__main__':
     air_data = add_map_bounding_vertices(air_data)
     triangulation = triangulate(air_data)
     air_data = calculate_weighted_means_at_bounds(air_data, triangulation.triangles)
-    save_current_triangulation(triangulation, air_data, triangulation_file_path)
+    save_current_triangulation(triangulation, air_data, engine)

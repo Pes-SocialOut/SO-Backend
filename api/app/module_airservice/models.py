@@ -1,5 +1,6 @@
 from app import db
 import enum
+from sqlalchemy.dialects.postgresql import BYTEA
 
 class station_type(enum.Enum):
     traffic = "traffic"
@@ -136,3 +137,12 @@ class air_quality_data(db.Model):
             'value': self.value,
             'contaminant_scale': self.contaminant_scale
         }
+
+class triangulation_cache(db.Model):
+    __tablename__ = 'tri_cache'
+
+    date_hour = db.Column(db.DateTime, primary_key=True)
+    tri_object_bytes = db.Column(BYTEA)
+
+    def __init__(self):
+        self.tri_object_bytes = None

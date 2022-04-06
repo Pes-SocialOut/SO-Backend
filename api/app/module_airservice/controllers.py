@@ -5,7 +5,7 @@ from flask import Blueprint, jsonify, request #, render_template, flash, g, sess
 from app import db
 
 # Import module models
-from app.module_airservice.models import air_quality_station, air_quality_data, pollutant
+from app.module_airservice.models import air_quality_station, air_quality_data, pollutant, triangulation_cache
 
 
 # Import time libraries
@@ -13,9 +13,6 @@ from datetime import datetime, timedelta
 
 # Import pickle library to save python objects to file
 import pickle as pkl
-import os
-triangulation_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'triangulation.pkl')
-
 
 # Define the blueprint: 'air', set its url prefix: app.url/air
 module_airservice_v1 = Blueprint('air', __name__, url_prefix='/v1/air')
@@ -71,12 +68,12 @@ def general_quality_at_a_point():
     except ValueError:
         return jsonify({"error_message":"<long> and <lat> query parameters must be of type float"}), 400
 
-    # TODO: Quizas leer el fichero cada vez es muy ineficiente, buscar alternativa.
     try:
-        with open(triangulation_file_path, 'rb') as inp:
-            triangulation_data = pkl.load(inp)
-    except FileNotFoundError:
-        return jsonify({"error_message":"Service depends on a file not currently available, try again later..."}), 404
+        tri_query_result = triangulation_cache.query.first()
+        triangulation_data = pkl.loads(tri_query_result.tri_object_bytes)
+        triangulation_upd_time = tri_query_result.date_hour
+    except:
+        return jsonify({"error_message":"Service depends on data not currently available, try again later..."}), 404
 
     # Encontrar triangulo
     trifinder = triangulation_data['tri'].get_trifinder()
@@ -102,7 +99,7 @@ def general_quality_at_a_point():
     if s2[0] != None:
         json_stations.append({'id': s2[0], 'long': s2[1], 'lat': s2[2], 'pollution': s2[3]})
 
-    response = jsonify({'pollution': general_quality, 'surrounding_measuring_stations': json_stations})
+    response = jsonify({'pollution': general_quality, 'triangulation_last_calculated_at': triangulation_upd_time, 'surrounding_measuring_stations': json_stations})
     response.status_code = 200
     return response
 
