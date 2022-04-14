@@ -1,1 +1,11 @@
+#Ignore the env (python virtual enviornment) directory
+env/
 __pycache__/
+/.pytest_cache
+testEnv.sh
+testEnvWin.ps1
+.env
+Dockerfile
+docker-entrypoint.sh
+docker-compose.yml
+app/module_airservice/triangulation.pkl
