@@ -41,6 +41,16 @@ class User(db.Model):
         db.session.add(self)
         db.session.commit()
 
+    def toJSON(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'email': self.email,
+            'profile_img_uri': self.profile_img_uri.value,
+            'mini_profile_img_uri': self.mini_profile_img_uri,
+            'description': self.description
+        }
+
 class SocialOutAuth(db.Model):
     __tablename__ = 'social_out_auth'
 

@@ -14,6 +14,7 @@ app.config.from_object('config')
 db = SQLAlchemy(app)
 
 # Sample HTTP error handling
+from app.module_users.controllers import module_users_v1
 from app.module_event.controllers import module_event_v1
 from app.module_airservice.controllers import module_airservice_v1
 
@@ -26,5 +27,6 @@ def homepage():
     return "Home route", 200
 
 # Register blueprint(s)
+app.register_blueprint(module_users_v1)
 app.register_blueprint(module_event_v1)
 app.register_blueprint(module_airservice_v1)
