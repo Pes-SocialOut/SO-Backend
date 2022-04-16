@@ -8,7 +8,7 @@ RUN pip install -U pip wheel
 RUN pip install -r /tmp/requirements.txt
 
 # Copiar el código de nuestra app para que se pueda ejecutar
-COPY ./run.py /wsgi.py
+COPY ./wsgi.py /wsgi.py
 COPY ./config.py /config.py
 COPY ./app /app
 
