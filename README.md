@@ -13,8 +13,8 @@
 
 ## ESTRUCTURA DE FICHEROS DE LA API
 
-En api/config.py hay la configuración de la app flask.
-En api/run.py hay la ejecución trivial de la app flask.
+En config.py hay la configuración de la app flask.
+En wsgi.py hay la ejecución trivial de la app flask.
 En el directorio app hay:
     - __init__.py que se ejecuta automáticamente al importar /app en run.py
     - Para cada módulo / servicio en el que podamos dividir la api habrá un directorio.
@@ -31,14 +31,14 @@ En un directorio de módulo habrá básicamente dos ficheros:
 Si hay que instalar librerías de python para ejecutar tests o pruebas en local, ejecutar des del directorio base de proyecto:
 
 ```
-$: python3 -m venv api/env
+$: python3 -m venv env
 
 -- Activa el entorno virtual de trabajo
-$: source api/env/bin/activate
+$: source env/bin/activate
 
 -- Upgrade de pip y wheel e instalar dependencias del proyecto
 $: pip install -U pip wheel
-$: pip install -r api/requirements.txt
+$: pip install -r requirements.txt
 
 -- Instalar nuevas dependencias
 $: pip3 install ...[librerías a añadir]...
@@ -46,7 +46,7 @@ $: pip3 install ...[librerías a añadir]...
 -- Hacer tests, pruevas, etc.
 
 -- Guardar nuevas dependencias en requirements para que los demás las tengan al proximo "pull"
-$: pip3 freeze > api/requirements.txt
+$: pip3 freeze > requirements.txt
 
 -- Desactivar el entorno
 $: deactivate
@@ -57,10 +57,10 @@ $: deactivate
 Primero instala los requirements.txt como se explica arriba.
 ```
 -- Ejecuta con el entorno activo:
-$: python3 api/run.py
+$: python3 wsgi.py
 
 -- o bien, ejecuta sin el entorno activo:
-$: api/env/bin/python3 api/run.py
+$: env/bin/python3 wsgi.py
 ```
 
 ## EJECUTAR LA API EN ENTORNO AISLADO
@@ -79,7 +79,7 @@ Si te salen errores en docker que hablan sobre "Environmental variable is not se
 
 Si estás en linux eres un máquina y es muy fácil:
 ```
-$: source api/testEnv.sh
+$: source testEnv.sh
 ```
 Si ejecutas lo siguiente y sale 5000 es que lo tienes bien:
 ```
@@ -89,13 +89,13 @@ Deberías poder ejecutar el docker-compose y que funcionase.
 
 En windows hay que ejecutar en el terminal de vscode (o PowerShell):
 ```
-$: .\api\testEnvWin.ps1
+$: .\testEnvWin.ps1
 ```
 Si salen errores en rojo sobre no poder ejecutar scripts es normal, pero habia que probar a ver si colaba ;)
 Abre un PowerShell (no funciona en el terminal) en modo administrador! y ves al directorio del proyecto (SO-Backend):
 ```
 $: Set-ExecutionPolicy -ExecutionPolicy Unrestricted
-$: .\api\testEnvWin.ps1
+$: .\testEnvWin.ps1
 $: Set-ExecutionPolicy -ExecutionPolicy Default
 ```
 (devuelvo el modo a default por seguridad)
@@ -131,7 +131,7 @@ Puedes conectarte a través de un cliente como por ejemplo DBeaver con las crede
 - database: socialout
 - port: 5432
 
-En todo caso, para poner al dia la bd con la versión más reciente entra en el virtual environment de python (créalo como se indica más arriba si no lo has hecho aún) y ejecuta **des del directorio /api**:
+En todo caso, para poner al dia la bd con la versión más reciente entra en el virtual environment de python (créalo como se indica más arriba si no lo has hecho aún) y ejecuta:
 ```
 $: python3 manage.py db migrate
 ```
@@ -160,7 +160,7 @@ Para seguir una metodología correcta los tests deben seguir el formato AAA (1. 
 
 Para ejecutar todos los tests que hay de la API:
 ```
-$: pytest api/test
+$: pytest test
 ```
 Para ejecutar solo una clase Test...Suite (un solo fichero _test.py)
 ```
