@@ -2,6 +2,10 @@
 from flask import Flask
 # Import SQLAlchemy
 from flask_sqlalchemy import SQLAlchemy
+# Import JWT
+from flask_jwt_extended import JWTManager
+# Import hashing
+from flask_hashing import Hashing
 
 # Define the WSGI application object
 app = Flask(__name__)
@@ -12,6 +16,12 @@ app.config.from_object('config')
 # Define the database object which is imported
 # by modules and controllers
 db = SQLAlchemy(app)
+
+# Define the jwt manager for authentication
+jwt = JWTManager(app)
+
+# Define the hashing object for app
+hashing = Hashing(app)
 
 # Sample HTTP error handling
 from app.module_users.controllers import module_users_v1
