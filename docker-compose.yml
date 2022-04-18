@@ -29,6 +29,9 @@ services:
       API_SECRET_KEY: ${API_SECRET_KEY}
       SQLALCHEMY_DATABASE_URI: ${SQLALCHEMY_DATABASE_URI}
       PYTHONPATH: "/"
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost"]
