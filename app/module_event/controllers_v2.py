@@ -220,35 +220,27 @@ def join_event(id):
     except:
         return jsonify({"error_message": "Mira el JSON body de la request, hay un atributo mal definido"}), 400 
 
-    # array para guardar las ids de los usuarios que se vayan uniendo
-    users_added = []
-    # iterar por todos los usuarios del request
-    for user in args:
-        try:
-             user_id = uuid.UUID(args[user])
-        except:
-             return jsonify({"error_message":f"la id {args[user]} no es una UUID valida"}), 400
-        
-        users_added.append(user_id)
-        
-        # restriccion: el usuario creador no se puede unir a su propio evento (ya se une automaticamente al crear el evento)
-        if event.user_creator == user_id:
-            # TODO Should we rollback? Should I pass him the ids in a different message?
-            #       Should I first go through all the array to see if the creator is there, then add all of them?
-            return jsonify({"error_message":
-                 f"El usuario {user_id} es el creador del evento (ya esta dentro). Los usuarios listados antes que el {users_added} si que se han unido"}), 400
+    try:
+        user_id = uuid.UUID(args.get("user_id"))
+    except:
+        return jsonify({"error_message":f"la user_id {user_id} no es una UUID valida"}), 400
+                
+    # restriccion: el usuario creador no se puede unir a su propio evento (ya se une automaticamente al crear el evento)
+    if event.user_creator == user_id:
+        return jsonify({"error_message":
+                f"El usuario {user_id} es el creador del evento (ya esta dentro)"}), 400
 
-        participant = Participant(event_id, user_id)
-        
-        # Errores al guardar en la base de datos: FK violated, etc
-        try:
-            participant.save()
-        except sqlalchemy.exc.IntegrityError:
-            return jsonify({"error_message":f"FK violated, el usuario {user_id} ya se ha unido al evento o no esta definido en la BD"}), 400
-        except:
-            return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
-    # TODO Paso las ids en otro mensaje? le importa eso?
-    return jsonify({"message":f"todos los usuarios ({users_added}) se han unido CON EXITO"}), 200
+    participant = Participant(event_id, user_id)
+    
+    # Errores al guardar en la base de datos: FK violated, etc
+    try:
+        participant.save()
+    except sqlalchemy.exc.IntegrityError:
+        return jsonify({"error_message":f"FK violated, el usuario {user_id} ya se ha unido al evento o no esta definido en la BD"}), 400
+    except:
+        return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
+
+    return jsonify({"message":f"el usuario {user_id} se han unido CON EXITO"}), 200
 
     
 
