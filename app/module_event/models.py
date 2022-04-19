@@ -4,7 +4,6 @@ from app import db
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 
-
 # Define an Event model
 class Event(db.Model):
 
@@ -20,14 +19,17 @@ class Event(db.Model):
     date_started = db.Column(db.DateTime, nullable=False)
     # End date of the event
     date_end = db.Column(db.DateTime, nullable=False)
-    # Creator of the event
-    user_creator = db.Column(UUID(as_uuid=True), nullable=False)
+    # Creator of the event (with FK)
+    user_creator = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id') , nullable=False)
     # Longitude of the location where the event will take taking place
     longitud = db.Column(db.Float, nullable=False)
     # Latitude of the location where the event will take taking place
     latitude = db.Column(db.Float, nullable=False)
     # Number of max participants of the event
     max_participants = db.Column(db.Integer, nullable=False)
+    # Relationship with Participant
+    participants_in_event = db.relationship('Participant', backref='participants', lazy=True)
+    # TODO Add image of event
 
     # To CREATE an instance of an Event
     def __init__(self, id, name, description, date_started, date_end, user_creator, longitud, latitude, max_participants):
@@ -63,7 +65,7 @@ class Event(db.Model):
 
     # To CONVERT an Event object to a dictionary
     def toJSON(self):
-        eventJSON = {
+        return {
             "id": self.id,
             "name": self.name,
             "description": self.description,
@@ -74,4 +76,48 @@ class Event(db.Model):
             "latitude": self.latitude,
             "max_participants": self.max_participants
         }
-        return eventJSON
+
+
+# Define an Event model
+class Participant(db.Model):
+
+    __tablename__ = 'participant'
+
+    # Event id
+    event_id = db.Column(UUID(as_uuid=True), db.ForeignKey('events.id'), primary_key=True)
+    # User id
+    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id'), primary_key=True )
+    
+
+    # To CREATE an instance of an Event
+    def __init__(self, event_id, user_id):
+
+        self.event_id = event_id
+        self.user_id = user_id
+
+    # To FORMAT an Event in a readable string format 
+    def __repr__(self):
+        return 'Participant(event_id: ' + str(self.event_id) + ', user_id: ' + str(self.user_id) + ').'
+
+    # To DELETE a row from the table
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+    
+    # To SAVE a row from the table
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
+    @staticmethod
+    # To GET ALL ROWS of the table
+    def get_all():
+        return Event.query.all()
+
+    # To CONVERT a Participant object to a dictionary
+    def toJSON(self):
+        return {
+            "event_id": self.event_id,
+            "user_id": self.user_id,
+        }
+
