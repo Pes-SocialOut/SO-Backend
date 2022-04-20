@@ -27,13 +27,13 @@ class Event(db.Model):
     latitude = db.Column(db.Float, nullable=False)
     # Number of max participants of the event
     max_participants = db.Column(db.Integer, nullable=False)
+    # Image of event (can be null)
+    event_image_uri = db.Column(db.String, default="", nullable=True)
     # Relationship with Participant
     participants_in_event = db.relationship('Participant', backref='participants', lazy=True)
-    # TODO Add image of event
 
     # To CREATE an instance of an Event
-    def __init__(self, id, name, description, date_started, date_end, user_creator, longitud, latitude, max_participants):
-
+    def __init__(self, id, name, description, date_started, date_end, user_creator, longitud, latitude, max_participants, event_image_uri):
         self.id = id
         self.name = name
         self.description = description
@@ -43,10 +43,16 @@ class Event(db.Model):
         self.longitud = longitud
         self.latitude = latitude
         self.max_participants = max_participants
+        self.event_image_uri = event_image_uri
+
 
     # To FORMAT an Event in a readable string format 
     def __repr__(self):
-        return 'Event(id: ' + str(self.id) + ', name: ' + str(self.name) + ', description: ' + str(self.description) + ', date_started: ' + str(self.date_started) + ', date_end: ' + str(self.date_end) + ', user_creator: ' + str(self.user_creator) + ', longitud: ' + str(self.longitud) + ', latitude: ' + str(self.latitude) + ', max_participants: ' + str(self.max_participants) + ').'
+        return '''Event(id: ' + str(self.id) + ', name: ' + str(self.name) + ', description: ' + str(self.description) +
+                ', date_started: ' + str(self.date_started) + ', date_end: ' + str(self.date_end) +
+                ', user_creator: ' + str(self.user_creator) + ', longitud: ' + str(self.longitud) +
+                ', latitude: ' + str(self.latitude) + ', max_participants: ' + str(self.max_participants) +
+                ', event_image_uri: ' + str(self.event_image_uri) ').'''
 
     # To DELETE a row from the table
     def delete(self):
@@ -74,7 +80,8 @@ class Event(db.Model):
             "user_creator": self.user_creator,
             "longitud": self.longitud,
             "latitude": self.latitude,
-            "max_participants": self.max_participants
+            "max_participants": self.max_participants,
+            "event_image_uri": self.event_image_uri
         }
 
 

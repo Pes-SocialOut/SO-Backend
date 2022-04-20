@@ -5,7 +5,10 @@ import sqlalchemy
 from app.module_event.models import Event, Participant
 from datetime import datetime
 from flask import (Blueprint, request, jsonify)
+from google.cloud import vision
 import uuid
+import validators
+
 # Import the database object from the main app module
 from app import db
 
@@ -47,9 +50,10 @@ def create_event():
     latitude = float(args.get("latitude"))
     max_participants = int(args.get("max_participants"))
     user_creator = uuid.UUID(args.get("user_creator"))
-    # TODO Add image of event
 
-    event = Event(event_uuid, args.get("name"), args.get("description"), date_started, date_end, user_creator, longitud, latitude, max_participants)
+    # TODO Añadir el creador al evento como participante
+
+    event = Event(event_uuid, args.get("name"), args.get("description"), date_started, date_end, user_creator, longitud, latitude, max_participants, args.get("event_image_uri"))
     
     # Errores al guardar en la base de datos: FK violated, etc
     try:
@@ -104,7 +108,7 @@ def modify_events_v2(id):
     event.longitud = float(args.get("longitud"))
     event.latitude = float(args.get("latitude"))
     event.max_participants = int(args.get("max_participants"))
-    # TODO Add image of event
+    event.event_image_uri = args.get("event_image_uri")
 
     # Errores al guardar en la base de datos: FK violated, etc
     try:
@@ -137,6 +141,8 @@ def check_atributes(args):
         return {"error_message": "atributo latitud no esta en la URL o es null"} 
     if args.get("max_participants") is None:
         return {"error_message": "atributo max_participants no esta en la URL o es null"} 
+    if args.get("event_image_uri") is None:
+        return {"error_message": "atributo event_image_uri no esta en la URL o es null"} 
 
     # TODO restriccion 1: mirar las palabras vulgares en el nombre y la descripcion
     
@@ -190,9 +196,47 @@ def check_atributes(args):
     if max_participants < 2:
         return {"error_message": "el numero maximo de participantes ha de ser mas grande que 2"}
 
-    # TODO Add image of event
+    # restriccion 9: imagen del evento no es una URL valida
+    if not validators.url(args.get("event_image_uri")):
+            return {"error_message": "la imagen del evento no es una URL valida"} 
+        
+    # TODO restriccion 10: mirar si la imagen es una imagen vulgar
+    # event_image_uri = args.get("event_image_uri")
+    # is_it_safe = detect_safe_search_uri(event_image_uri)
+    # for category in is_it_safe:
+    #     if(is_it_safe[category] == 'UNKNOWN' | is_it_safe[category] == 'POSSIBLE' | is_it_safe[category] == 'LIKELY' | is_it_safe[category] == 'VERY_LIKELY'):
+    #         return {"error_message": "la imagen del evento no puede ser explicita (hemos detectado que podria serlo)"} 
 
     return {"error_message": "all good"}
+
+
+def detect_safe_search_uri(uri):
+    """Detects unsafe features in the file located in Google Cloud Storage or
+    on the Web."""
+    client = vision.ImageAnnotatorClient()
+    image = vision.Image()
+    image.source.image_uri = uri
+
+    is_it_safe = {}
+
+    response = client.safe_search_detection(image=image)
+    safe = response.safe_search_annotation
+
+    # Names of likelihood from google.cloud.vision.enums
+    likelihood_name = ('UNKNOWN', 'VERY_UNLIKELY', 'UNLIKELY', 'POSSIBLE',
+                       'LIKELY', 'VERY_LIKELY')
+                    
+    is_it_safe["adult"] = likelihood_name[safe.adult]
+    is_it_safe["medical"] = likelihood_name[safe.medical]
+    is_it_safe["spoofed"] = likelihood_name[safe.spoof]
+    is_it_safe["violence"] = likelihood_name[safe.violence]
+    is_it_safe["racy"] = likelihood_name[safe.racy]
+
+    if response.error.message:
+        return {"error_message": "la imagen del evento no se ha compilado correctamente"} 
+
+    return is_it_safe
+
 
 # UNIRSE EVENTO: Usuarios se unen a un evento
 # Recibe:
