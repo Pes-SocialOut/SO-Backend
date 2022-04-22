@@ -51,7 +51,6 @@ def create_event():
     max_participants = int(args.get("max_participants"))
     user_creator = uuid.UUID(args.get("user_creator"))
 
-    # TODO Añadir el creador al evento como participante
 
     event = Event(event_uuid, args.get("name"), args.get("description"), date_started, date_end, user_creator, longitud, latitude, max_participants, args.get("event_image_uri"))
     
@@ -60,6 +59,16 @@ def create_event():
         event.save()
     except sqlalchemy.exc.IntegrityError:
         return jsonify({"error_message": "User FK violated, el usuario user_creator no esta definido en la BD"}), 400
+    except:
+        return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
+
+    # Añadir el creador al evento como participante
+    participant = Participant(event.id, user_creator)
+
+    try:
+        participant.save()
+    except sqlalchemy.exc.IntegrityError:
+        return jsonify({"error_message": "FK violated"}), 400
     except:
         return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
 
