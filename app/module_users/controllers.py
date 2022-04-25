@@ -91,8 +91,44 @@ def update_profile(id):
     return jsonify(profile), 200
 
 @module_users_v1.route('/<id>/pw', methods=['POST'])
+@jwt_required(optional=False)
 def change_password(id):
-    return jsonify({'error_message': 'Password changes not yet implemented'}), 501
+    if not ('old' in  request.json and 'new' in request.json):
+        return jsonify({'error_message': 'Missing old or new password in json body.'}), 400 
+    old_pw = request.json['old']
+    new_pw = request.json['new']
+
+    # Check new password requirements
+    if old_pw == new_pw:
+        return jsonify({'error_message': 'Old and new passwords must be different'}), 400
+    if len(new_pw) < 8:
+        return jsonify({'error_message': 'New password must have a length of at least 8 characters'}), 400
+    if (sum(1 for c in new_pw if c.isupper()) == 0):
+        return jsonify({'error_message': 'New password must have at least one uppercase letter'}), 400
+    if (sum(1 for c in new_pw if c.islower()) == 0):
+        return jsonify({'error_message': 'New password must have at least one lowercase letter'}), 400
+    if (all([not c.isdigit() for c in new_pw])):
+        return jsonify({'error_message': 'New password must have at least one number digit'}), 400
+
+    auth_id = get_jwt_identity()
+    if id != auth_id:
+        return jsonify({'error_message': 'Only the owner of the account can change its password'}), 403
+    socialout_auth = SocialOutAuth.query.filter_by(id = id).first()
+    if socialout_auth == None:
+        return jsonify({'error_message': 'Socialout authentication method not available for this user, can not change password'}), 400 
+    if not hashing.check_value(socialout_auth.pw, old_pw, salt=socialout_auth.salt):
+        return jsonify({'error_message': 'Wrong old password'}), 400
+
+    # Add socialout auth method to user
+    user_salt = get_random_salt(15)
+    hashed_pw = hashing.hash_value(new_pw, salt=user_salt)
+    socialout_auth = SocialOutAuth(id, user_salt, hashed_pw)
+    try:
+        socialout_auth.save()
+    except:
+        return jsonify({'error_message': f'Something went wrong when changing password for user {id}'}), 500
+
+    return jsonify({'status': 'success'}), 200
 
 ############################################ REGISTER #############################################
 
