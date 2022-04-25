@@ -112,19 +112,16 @@ class GoogleAuth(db.Model):
 
     # User id
     id = db.Column(UUID(as_uuid=True), db.ForeignKey(User.id), primary_key=True, default=uuid.uuid4())
-    # Google id
-    google_id = db.Column(db.String, unique=True, nullable=False)
     # Google access token
     access_token = db.Column(db.String, nullable=False)
 
     # To CREATE an instance of a GoogleUser
-    def __init__(self, id, google_id, access_token):
+    def __init__(self, id, access_token):
         self.id = id
-        self.google_id = google_id
         self.access_token = access_token
 
     def __repr__(self):
-        return f'User({self.id}, {self.google_id}, {self.access_token})'
+        return f'User({self.id}, {self.access_token})'
 
     # To DELETE a row from the table
     def delete(self):
@@ -141,19 +138,16 @@ class FacebookAuth(db.Model):
 
     # User id
     id = db.Column(UUID(as_uuid=True), db.ForeignKey(User.id), primary_key=True, default=uuid.uuid4())
-    # facebook id
-    facebook_id = db.Column(db.String, unique=True, nullable=False)
     # facebook access token
     access_token = db.Column(db.String, nullable=False)
 
     # To CREATE an instance of a facebookUser
-    def __init__(self, id, facebook_id, access_token):
+    def __init__(self, id, access_token):
         self.id = id
-        self.facebook_id = facebook_id
         self.access_token = access_token
 
     def __repr__(self):
-        return f'User({self.id}, {self.facebook_id}, {self.access_token})'
+        return f'User({self.id}, {self.access_token})'
 
     # To DELETE a row from the table
     def delete(self):
