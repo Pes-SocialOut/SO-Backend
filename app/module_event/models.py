@@ -1,5 +1,6 @@
 # Import the database object (db) from the main application module
 # We will define this inside /app/__init__.py in the next sections.
+from sqlalchemy import ForeignKey
 from app import db
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
@@ -75,3 +76,47 @@ class Event(db.Model):
             "max_participants": self.max_participants
         }
         return eventJSON
+
+
+#Define the like class model
+class Like(db.Model):
+
+    __tablename__ = 'likes'
+
+    #User id
+    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey('user.id'), primary_key = True)
+
+    #Event if
+    event_id = db.Colunm(UUID(as_uuid = True),  db.ForeignKey('event.id'), primary_key = True)
+
+    #To create an instance of Like
+    def __init__(self, user_id, event_id):
+
+        self.user_id = user_id
+        self.event_id = event_id
+
+    #To FORMAT an Like in a readable string format
+    def __repr__(self):
+        return 'Like(user_id: ' + str(self.user_id) + ', event_id: ' + str(self.event_id) + ').'
+
+    #To DELETE a row from the table
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+
+    #To SAVE a row from the table
+    def save(self):
+        db.session.add(self)
+        db.session.commit
+
+    #To GET ALL ROWS of the table
+    def get_all():
+        return Like.query.all()
+
+    #To CONVERT an Eent objecto to a dictionary
+    def toJSON(self):
+        return{
+            "user_id": self.user_id,
+            "event_id": self.event_id
+        }
+    

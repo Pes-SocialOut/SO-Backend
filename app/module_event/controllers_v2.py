@@ -159,35 +159,52 @@ def check_atributes(args):
 
 # GET method: returns the information of one event
 @module_event_v2.route('/<id>', methods=['GET'])
+# RECIBE:
+# - GET HTTP request con la id del evento del que se quieren TODOS obtener los parametros
+# DEVUELVE:
+# - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
+# - 201: Un objeto JSON con TODOS los parametros del evento con la id de la request
 def get_event(id):
     try:
         event_id = uuid.UUID(id)
     except:
-        return jsonify({"error_message": "event_id isn't a valid UUID"}), 400
+        return jsonify({"error_message": "Event_id isn't a valid UUID"}), 400
 
     try:
         event = Event.query.filter_by(id = event_id)
         return event.toJSON()
     except:
-        return jsonify({"error_message": "El evento no existe"}), 400
+        return jsonify({"error_message": "The event doesn't exist"}), 400
+
 
 # DELETE method: deletes an event from the database
 @module_event_v2.route('/<id>', methods=['DELETE'])
+# RECIBE:
+# - DELETE HTTP request con la id del evento que se quiere eliminar
+# DEVUELVE:
+# - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
+# - 200: Un objeto JSON confirmando que se ha eliminado correctamente
 def delete_event(id):
     try:
         user_id = uuid.UUID(id)
     except :
-        return jsonify({"error_message": "user_id isn't a valid UUID"}), 400
+        return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
 
     try:
         eventb = Event.query.filter_by(id = user_id)
         eventb.delete()
         return jsonify({"message": "Successful DELETE"}), 200
     except :
-        return jsonify({"error_message": "El evento no existe"}), 400
+        return jsonify({"error_message": "The event doesn't exist"}), 400
+
 
 # GET ALL method: returns the information of all the events of the database
 @module_event_v2.route('/', methods=['GET'])
+# RECIBE:
+# - GET HTTP request
+# DEVUELVE:
+# - 400: Un objeto JSON con los posibles mensajes de error
+# - 201: Un objeto JSON con todos los eventos que hay en el sistema
 def get_all_events():
     try:
         all_events = Event.get_all()
@@ -205,3 +222,73 @@ def modify_events():
 @module_event_v2.errorhandler(404)
 def page_not_found():
     return "<h1>404</h1><p>The event could not be found.</p>", 404
+
+#Dar like: un usuario le da like a un evento
+#POST method: crea un Like en la base de
+@module_event_v2.route('/id', methods=['POST'])
+#RECIBE:
+#- POST HTTP request con los parametros en un JSON object en el body de la request.
+#      {name, description, date_started, date_end, user_creator, longitud, latitude, max_participants}
+#DEVUELVE:
+#- 400: Un objeto JSON con un mensaje de error
+#- 201: Un objeto JSON con todos los parametros del evento creado (con la id incluida) 
+def create_like():
+
+    try:
+        args = request.json
+    except:
+        return jsonify({"error_message": "Mira el JSON body de la request, hay un atributo mal definido"}), 400
+
+    user_id = args.get("user_id")
+    event_id = args.get("event_id")
+
+    try:
+        user_id = uuid.UUID(id)
+    except:
+        return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
+
+    try:
+        event_id = uuid.UUID(id)
+    except:
+        return jsonify({"error_message": "Event_id isn't a valid UUID"}), 400
+      
+    Nuevo_like = Like(user_id, event_id)
+    
+    # TODO Encontrar errores de base de datos como null value, usuario no existe, etc.
+    try:
+        Nuevo_like.save()
+    except:
+        return jsonify({"error_message": " "})
+    
+    LikeJSON = Nuevo_like.toJSON()
+    return jsonify(LikeJSON), 201
+
+# DELETE method: deletes a like from the database
+@module_event_v2.route('/<id>', methods=['DELETE'])
+# RECIBE:
+# - DELETE HTTP request con la id del evento que se quiere eliminar
+# DEVUELVE:
+# - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
+# - 200: Un objeto JSON confirmando que se ha eliminado correctamente
+def delete_like(id):
+
+    args = request.json
+    delete_user_id = args.get("user_id")
+    delete_event_id = args.get("event_id")
+
+    try:
+        delete_user_id = uuid.UUID(id)
+    except:
+        return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
+
+    try:
+        delete_event_id = uuid.UUID(id)
+    except:
+        return jsonify({"error_message": "Event_id isn't a valid UUID"}), 400
+
+    try:
+        Like_borrar = Like.query.filter_by(user_id = delete_user_id, event_id = delete_event_id).first()
+        Like_borrar.delete()
+        return jsonify({"message": "Successful DELETE"}), 200
+    except :
+        return jsonify({"error_message": "The event doesn't exist"}), 400
