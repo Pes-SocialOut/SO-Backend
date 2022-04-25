@@ -41,14 +41,54 @@ def get_profile(id):
             return jsonify({'error_message':f'User with id {id} does not exist'}), 404
     profile = query_result.toJSON()
     if is_authenticated_id:
-        profile['friends'] = []
+        profile['friends'] = [] # TODO: add friends
     else:
         del profile['email']
+    # Add languages, when implemented
     return jsonify(profile), 200
 
 @module_users_v1.route('/<id>', methods=['PUT'])
+@jwt_required(optional=False)
 def update_profile(id):
-    return jsonify({'error_message': 'Profile updates not yet implemented'}), 501
+    auth_id = get_jwt_identity()
+    if id != auth_id:
+        return jsonify({'error_message': 'Only the owner of the profile can update it'}), 403
+    
+    if 'username' not in request.json:
+        return jsonify({'error_message': 'Username attribute missing in json'}), 400
+    if 'description' not in request.json:
+        return jsonify({'error_message': 'Description attribute missing in json'}), 400
+    if 'languages' not in request.json:
+        return jsonify({'error_message': 'Languages list attribute missing in json'}), 400
+    if 'hobbies' not in request.json:
+        return jsonify({'error_message': 'Hobbies list attribute missing in json'}), 400
+    
+    username = request.json['username']
+    description = request.json['description']
+    languages = request.json['languages']
+    hobbies = request.json['hobbies']
+
+    user = User.query.filter_by(id = id).first()
+    if (user == None):
+        return jsonify({'error_message': f'User does not exist for id {id}'}), 404
+
+    user.username = username
+    user.description = description
+    user.hobbies = hobbies
+
+    try:
+        user.save()
+    except:
+        return jsonify({'error_message': f'An error occured when updating user {id}'}), 500
+
+    # TODO: Update languages, when implemented
+
+    profile = user.toJSON()
+
+    # TODO: add friend list and languages
+    profile['friends'] = []
+
+    return jsonify(profile), 200
 
 @module_users_v1.route('/<id>/pw', methods=['POST'])
 def change_password(id):
