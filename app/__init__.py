@@ -17,6 +17,7 @@ db = SQLAlchemy(app)
 from app.module_event.controllers import module_event_v1
 from app.module_event.controllers_v2 import module_event_v2
 from app.module_airservice.controllers import module_airservice_v1
+from app.module_users.controllers import module_users_v1
 
 @app.errorhandler(404)
 def not_found(error):
@@ -27,6 +28,7 @@ def homepage():
     return "Home route", 200
 
 # Register blueprint(s)
-#app.register_blueprint(module_event_v1)
+app.register_blueprint(module_users_v1)
+app.register_blueprint(module_event_v1)
 app.register_blueprint(module_event_v2)
 app.register_blueprint(module_airservice_v1)
