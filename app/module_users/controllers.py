@@ -68,7 +68,7 @@ def update_profile(id):
     languages = request.json['languages']
     hobbies = request.json['hobbies']
 
-    user = User.query.filter_by(id = id).first()
+    user = User.query.filter_by(id = uuid.UUID(id)).first()
     if (user == None):
         return jsonify({'error_message': f'User does not exist for id {id}'}), 404
 
@@ -101,34 +101,35 @@ def change_password(id):
     # Check new password requirements
     if old_pw == new_pw:
         return jsonify({'error_message': 'Old and new passwords must be different'}), 400
-    if len(new_pw) < 8:
-        return jsonify({'error_message': 'New password must have a length of at least 8 characters'}), 400
-    if (sum(1 for c in new_pw if c.isupper()) == 0):
-        return jsonify({'error_message': 'New password must have at least one uppercase letter'}), 400
-    if (sum(1 for c in new_pw if c.islower()) == 0):
-        return jsonify({'error_message': 'New password must have at least one lowercase letter'}), 400
-    if (all([not c.isdigit() for c in new_pw])):
-        return jsonify({'error_message': 'New password must have at least one number digit'}), 400
+    
+    # Check password strength
+    pw_msg, pw_status = verify_password_strength(new_pw)
+    if pw_status != 200: return pw_msg, pw_status
 
     auth_id = get_jwt_identity()
     if id != auth_id:
         return jsonify({'error_message': 'Only the owner of the account can change its password'}), 403
-    socialout_auth = SocialOutAuth.query.filter_by(id = id).first()
+    socialout_auth = SocialOutAuth.query.filter_by(id = uuid.UUID(id)).first()
     if socialout_auth == None:
         return jsonify({'error_message': 'Socialout authentication method not available for this user, can not change password'}), 400 
     if not hashing.check_value(socialout_auth.pw, old_pw, salt=socialout_auth.salt):
         return jsonify({'error_message': 'Wrong old password'}), 400
 
+    debug = f'{socialout_auth.salt} - {socialout_auth.pw}'
+
     # Add socialout auth method to user
     user_salt = get_random_salt(15)
     hashed_pw = hashing.hash_value(new_pw, salt=user_salt)
-    socialout_auth = SocialOutAuth(id, user_salt, hashed_pw)
+    socialout_auth.salt = user_salt
+    socialout_auth.pw = hashed_pw
     try:
-        socialout_auth.save()
+        db.session.commit()
     except:
-        return jsonify({'error_message': f'Something went wrong when changing password for user {id}'}), 500
+        return jsonify({'error_message': f'Something went wrong when changing password for user {id}, {user_salt}, {new_pw}, {hashed_pw} .... {debug}'}), 500
 
-    return jsonify({'status': 'success'}), 200
+    user = User.query().filter_by(id = uuid.UUID(id)).first()
+    send_email(user.email, 'SocialOut password change notice!', f'Your password was recently changed, if it was not you, please log into your {user.username} account by clicking on "Forgot password" in the login screen.')
+    return generate_tokens(str(user.id)), 200
 
 ############################################ REGISTER #############################################
 
@@ -214,6 +215,10 @@ def register_socialout():
     if user_id_for_email(email) != None:
         return jsonify({'error_message': 'User with this email already exists'}), 400
     
+    # Check password strength
+    pw_msg, pw_status = verify_password_strength(pw)
+    if pw_status != 200: return pw_msg, pw_status
+
     # Check verification code in codes sent to email
     db_verification = EmailVerificationPendant.query.filter_by(email = email).first()
     if db_verification == None:
@@ -405,7 +410,7 @@ def login_google():
         return jsonify({'error_message': 'Authentication method not available for this email'}), 400 
     return generate_tokens(str(user.id)), 200
 
-@module_users_v1.route('/refresh', methods=['POST'])
+@module_users_v1.route('/refresh', methods=['GET'])
 @jwt_required(refresh=True)
 def refresh():
     identity = get_jwt_identity()
@@ -421,7 +426,7 @@ def link_auth_method():
         return jsonify({'error_message': 'Must indicate type of authentication to link {socialout, google, facebook}'}), 400
     if 'credentials' not in request.json:
         return jsonify({'error_message': 'Missing attribute credentials in json body'}), 400
-    type = request.args['type']
+    type = request.json['type']
     if type == 'socialout':
         return link_socialout_auth_method(request.json['credentials'])
     if type == 'google':
@@ -439,6 +444,10 @@ def link_socialout_auth_method(args):
     # Check user exists
     if user_id == None:
         return jsonify({'error_message': 'User with this email does not exist, please register first'}), 400
+
+    # Check password strength
+    pw_msg, pw_status = verify_password_strength(password)
+    if pw_status != 200: return pw_msg, pw_status
 
     # Check verification code in codes sent to email
     db_verification = EmailVerificationPendant.query.filter_by(email = email).first()
@@ -528,15 +537,16 @@ def send_verification_code_to(email):
     else:
         db_verification.code = code
         db.session.commit()
-    
-    # Send verification email with code
+    send_email(email, 'SocialOut auth verification code', f'Your verification code for SocialOut authentication is {code}')
+
+def send_email(email, subject, body):
     EMAIL_ADRESS = os.getenv('MAIL_USERNAME')
     EMAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
     msg = EmailMessage()
-    msg['Subject'] = 'Test message'
+    msg['Subject'] = subject
     msg['From'] = EMAIL_ADRESS
     msg['To'] = email
-    msg.set_content(f'Your verification code for SocialOut authentication is {code}')
+    msg.set_content(body)
 
     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
         smtp.login(EMAIL_ADRESS, EMAIL_PASSWORD)
@@ -549,3 +559,14 @@ def generate_tokens(user_id):
 
 def get_random_salt(length):
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+
+def verify_password_strength(pw):
+    if len(pw) < 8:
+        return jsonify({'error_message': 'New password must have a length of at least 8 characters'}), 400
+    if (sum(1 for c in pw if c.isupper()) == 0):
+        return jsonify({'error_message': 'New password must have at least one uppercase letter'}), 400
+    if (sum(1 for c in pw if c.islower()) == 0):
+        return jsonify({'error_message': 'New password must have at least one lowercase letter'}), 400
+    if (all([not c.isdigit() for c in pw])):
+        return jsonify({'error_message': 'New password must have at least one number digit'}), 400
+    return {}, 200
