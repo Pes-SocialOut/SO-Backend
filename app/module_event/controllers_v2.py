@@ -1,8 +1,9 @@
 # Import flask dependencies
 # Import module models (i.e. User)
+from unicodedata import name
 from psycopg2 import IntegrityError
 import sqlalchemy
-from app.module_event.models import Event, Participant
+from app.module_event.models import Event, Participant, Like
 from datetime import datetime
 from flask import (Blueprint, request, jsonify)
 from google.cloud import vision
@@ -318,6 +319,24 @@ def get_event(id):
     except:
         return jsonify({"error_message": "The event doesn't exist"}), 400
 
+# GET/user_creator method: devuelve todos los eventos creados por un usuario
+@module_event_v2.route('/cretor/<id>', methods=['GET'])
+# RECIBE:
+# - GET HTTP request con la id del usuario del que se quieren obtener los eventos creados.
+# - 400: Un objeto JSON con los posibles mensajes de error, id no valida
+# - 201: Un objeto JSON con TODOS los parametros del evento con la id de la request
+def get_creations(id):
+    try:
+        user_id = uuid.UUID(id)
+    except:
+        return jsonify({"error_message": "Event_id isn't a valid UUID"}), 400
+
+    try:
+        events_creats = Event.query.filter_by(user_creator = user_id)
+        return jsonify([event.toJSON() for event in events_creats]), 201
+    except:
+        return jsonify({"error_message": "An error has ocurred"}), 400        
+
 
 # DELETE method: deletes an event from the database
 @module_event_v2.route('/<id>', methods=['DELETE'])
@@ -335,7 +354,7 @@ def delete_event(id):
     try:
         eventb = Event.query.filter_by(id = user_id)
         eventb.delete()
-        return jsonify({"message": "Successful DELETE"}), 200
+        return jsonify({"message": "Successful DELETE"}), 202
     except :
         return jsonify({"error_message": "The event doesn't exist"}), 400
 
@@ -436,3 +455,74 @@ def delete_like(id):
         return jsonify({"message": "Successful DELETE"}), 200
     except :
         return jsonify({"error_message": "The event doesn't exist"}), 400
+
+# GET method: todos los eventos a los que un usuario ha dado like
+@module_event_v2.route('/likes/<id>', methods=['GET'])
+# RECIBE:
+# - GET HTTP request con la id del usuario que queremos solicitar
+# DEVUELVE:
+# - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
+# - 200: Un objeto JSON confirmando que se ha eliminado correctamente
+def get_likes_by_user(id):
+
+    args = request.json
+    user_id = args.get("user_id")
+
+    try:
+        user_id = uuid.UUID(id)
+    except:
+        return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
+
+    try:
+        ides_likes = Like.query.filter_by(user_id = user_id)
+        for ides in ides_likes:
+            events += Event.query.filter_by(id = ides).first()
+        return jsonify([event.toJSON() for event in events])
+    except:
+        return jsonify({"error_message": "The event doesn't exist"}), 400        
+
+# FILTRAR EVENTO: Retorna un conjunto de eventos en base a unas caracteristicas
+# Recibe:
+# GET HTTP request con los atributos que quiere filtrar (formato JSON)
+#       {name, date_started, date_end}
+# Devuelve:
+@module_event_v2.route('/Filter', methods=['GET'])
+def filter_by():
+    try:
+        args = request.json
+    except:
+        return jsonify({"error_message": "The JSON body from the request is poorly defined"}), 400 
+
+    if args.get("name") is not None:
+        if len(args.get("name")) == 0:
+            return {"error_message": "EL nom es un string incorrecte"}    
+
+    if args.get("date_started") is not None or args.get("date_end") is not None:
+        try:
+            date_start_interval = datetime.strptime(args.get("date_started"), '%Y-%m-%d %H:%M:%S')
+            date_end_interval = datetime.strptime(args.get("date_end"), '%Y-%m-%d %H:%M:%S')
+            if date_start_interval > date_end_interval:
+                return {"error_message": "The start date must be greater than the end date"}
+            if date_start_interval == date_end_interval:
+                return {"error_message": "The start date and the end date are the same" }
+            if date_start_interval < datetime.now():
+                return {"error_message": "Date_started is before the now time"}
+        except ValueError:
+            return {"error_message": "date_started or date_ended aren't real dates or they don't exist!"}
+
+    try:
+        events_filter = None
+        if args.get("name") is not None:
+            events_filter = Event.filter_by(name = args.get["name"])
+
+        if args.get("date_started") is not None and args.get("name") is not None:
+            events_filter = events_filter.filter_by(Event.date_started >= date_start_interval, Event.date_started <= date_end_interval, Event.date_end <= date_end_interval, )
+        elif args.get("date_started") is not None:
+            events_filter = Event.filter_by(Event.date_started >= date_start_interval, Event.date_started <= date_end_interval, Event.date_end <= date_end_interval, )
+
+        if events_filter is None:
+                return jsonify({"error_message": "Any event match with the filter"}), 400
+        else:
+            return jsonify([event.toJSON() for event in events_filter])
+    except Exception as e:
+        return jsonify({"error_message": e}), 400
