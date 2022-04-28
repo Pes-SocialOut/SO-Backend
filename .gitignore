@@ -7,3 +7,5 @@ testEnv.sh
 testEnvWin.ps1
 .env
 app/module_airservice/triangulation.pkl
+docker-compose.yml
+Dockerfile
