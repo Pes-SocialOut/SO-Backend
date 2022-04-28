@@ -17,8 +17,8 @@ module_users_v1 = Blueprint('users', __name__, url_prefix='/v1/users')
 def create_user():
     # todo hardcoded
     user_uuid = uuid.uuid4()
-    user_username = "test2"
-    user_email = "test2@elputoamo.com"
+    user_username = "manu"
+    user_email = "manu@elputoamo.com"
     user_profile_img_uri = "pen"
     user_mini_profile_img_uri = "e"
     user_description = "test"

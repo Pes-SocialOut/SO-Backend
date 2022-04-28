@@ -92,12 +92,12 @@ class Like(db.Model):
 
     __tablename__ = 'likes'
 
-    #User id
-    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey('user.id'), primary_key = True)
+    # Event id
+    event_id = db.Column(UUID(as_uuid=True), db.ForeignKey('events.id'), primary_key=True)
+    # User id
+    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id'), primary_key=True )
 
-    #Event if
-    event_id = db.Colunm(UUID(as_uuid = True),  db.ForeignKey('event.id'), primary_key = True)
-
+    
     #To create an instance of Like
     def __init__(self, user_id, event_id):
 
