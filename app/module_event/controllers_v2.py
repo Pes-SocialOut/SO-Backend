@@ -6,7 +6,7 @@ import sqlalchemy
 from app.module_event.models import Event, Participant, Like
 from datetime import datetime
 from flask import (Blueprint, request, jsonify)
-from google.cloud import vision
+#from google.cloud import vision
 import uuid
 import validators
 
@@ -60,7 +60,7 @@ def create_event():
         event.save()
     except sqlalchemy.exc.IntegrityError:
         return jsonify({"error_message": "User FK violated, el usuario user_creator no esta definido en la BD"}), 400
-    except:
+    except: 
         return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
 
     # Añadir el creador al evento como participante
@@ -248,14 +248,14 @@ def detect_safe_search_uri(uri):
     return is_it_safe
 
 
-# UNIRSE EVENTO: Usuarios se unen a un evento
+# UNIRSE EVENTO: Usuario se une a un evento
 # Recibe:
-# POST HTTP request con la id del evento en la URI y los usuarios que se quieran añadir al evento en el body (formato JSON)
-#       {user_id1, user_id2, etc}
+# POST HTTP request con la id del evento en la URI y el usuario que se quieran añadir al evento en el body (formato JSON)
+#       {user_id}
 # Devuelve:
 # - 400: Un objeto JSON con un mensaje de error
-# - 200: Un objeto JSON con un mensaje de todos los usuarios se han unido con exito 
-@module_event_v2.route('/<id>', methods=['POST'])
+# - 200: Un objeto JSON con un mensaje de el usuario se ha unido con exito
+@module_event_v2.route('/<id>/join', methods=['POST'])
 def join_event(id):
     try:
         event_id = uuid.UUID(id)
@@ -295,6 +295,60 @@ def join_event(id):
         return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
 
     return jsonify({"message":f"el usuario {user_id} se han unido CON EXITO"}), 200
+
+
+# ABANDONAR EVENTO: Usuario abandona a un evento
+# Recibe:
+# POST HTTP request con la id del evento en la URI y el usuario que se quieran añadir al evento en el body (formato JSON)
+#       {user_id}
+# Devuelve:
+# - 400: Un objeto JSON con un mensaje de error
+# - 200: Un objeto JSON con un mensaje de el usuario ha abandonado el evento CON EXITO
+@module_event_v2.route('/<id>/leave', methods=['POST'])
+def leave_event(id):
+    try:
+        event_id = uuid.UUID(id)
+    except:
+        return jsonify({"error_message": "la id del evento no es una UUID valida"}), 400
+
+    try:
+        event = Event.query.filter_by(id = event_id).first()
+    except:
+        return jsonify({"error_message":f"El evento {event_id} no existe en la BD"}), 400
+        
+    try:
+        args = request.json
+    except:
+        return jsonify({"error_message": "Mira el JSON body de la request, hay un atributo mal definido"}), 400 
+
+    try:
+        user_id = uuid.UUID(args.get("user_id"))
+    except:
+        return jsonify({"error_message":f"la user_id {user_id} no es una UUID valida"}), 400
+
+    # restriccion: el usuario no es participante del evento
+    try:
+        participant = Participant.query.filter_by(event_id = event_id, user_id = user_id).first()
+    except:
+        return jsonify({"error_message":f"El usuario {user_id} no es participante del evento {event_id}"}), 400
+    
+    if participant is None:
+        return jsonify({"error_message":f"El usuario {user_id} no es participante del evento {event_id}"}), 400
+
+    # restriccion: el usuario creador no puede abandonar su evento
+    if event.user_creator == user_id:
+        return jsonify({"error_message":
+                f"El usuario {user_id} es el creador del evento (no puede abandonar)"}), 400
+    
+    # Errores al guardar en la base de datos: FK violated, etc
+    try:
+        participant.delete()
+    except sqlalchemy.exc.IntegrityError:
+        return jsonify({"error_message":f"FK violated, el usuario {user_id} no esta definido en la BD"}), 400
+    except:
+        return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
+
+    return jsonify({"message":f"el participante {user_id} ha abandonado CON EXITO"}), 200
 
     
 
