@@ -8,3 +8,4 @@ testEnvWin.ps1
 app/module_airservice/triangulation.pkl
 docker-compose.yml
 Dockerfile
+migrations/versions/
