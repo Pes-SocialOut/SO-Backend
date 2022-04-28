@@ -2,7 +2,6 @@
 env/
 __pycache__/
 /.pytest_cache
-migrations/versions/
 testEnv.sh
 testEnvWin.ps1
 .env
