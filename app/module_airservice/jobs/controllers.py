@@ -13,7 +13,7 @@ module_airservice_jobs = Blueprint('air_jobs', __name__, url_prefix='/v1/air/job
 @module_airservice_jobs.route('/auth', methods=['GET'])
 def get_auth_for_jobs():
     rand_string = ''.join(random.choices(string.ascii_letters + string.digits, k=15))
-    access_token = create_access_token(identity=rand_string, expires_delta=timedelta(minutes=10))
+    access_token = create_access_token(identity=rand_string, expires_delta=timedelta(seconds=10))
     return jsonify({'str': rand_string, 'token': access_token})
 
 @module_airservice_jobs.route('/extract', methods=['GET'])
@@ -39,7 +39,7 @@ def calculate_triangulation_job():
         return 'Auth failed', 403
     
     ini_time = datetime.now()
-    triangulation()
+    triangulation(os.getenv("SQLALCHEMY_DATABASE_URI"))
     delta = datetime.now() - ini_time
 
     return f'Triangulation calulated in {delta.seconds} seconds\n', 200
