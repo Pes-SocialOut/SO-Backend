@@ -8,8 +8,6 @@ from sqlalchemy import create_engine
 
 from app.module_airservice.models import station_type, urban_area
 
-engine = create_engine(os.getenv("SQLALCHEMY_DATABASE_URI"))
-
 hours = ['h01','h02','h03','h04','h05','h06',
          'h07','h08','h09','h10','h11','h12',
          'h13','h14','h15','h16','h17','h18',
@@ -19,7 +17,7 @@ date_today = datetime.today()
 date_anterior = date_today - timedelta(days = 1)
 date_anterior = date_anterior.strftime('%Y-%m-%d')
 
-def insert_air_station(eoi_code, name, station_t, urban_a, altitude, latitude, longitude) -> None:
+def insert_air_station(eoi_code, name, station_t, urban_a, altitude, latitude, longitude, engine) -> None:
     try:
         with engine.connect() as conn:
             conn.execute(
@@ -31,7 +29,7 @@ def insert_air_station(eoi_code, name, station_t, urban_a, altitude, latitude, l
 def normalizar(cont, valor) -> float:
     return valor/contaminantes[cont][0]
 
-def insert_hour_data(hour_tag, codi_eoi, pollutant, value) -> None:
+def insert_hour_data(hour_tag, codi_eoi, pollutant, value, engine) -> None:
     hour = hour_tag[-2:] #obtener los dos ultimos caracteres
     date_hora_final = date_anterior+' '+hour+':00:00'
     if hour == 24: date_hora_final = date_today.strftime('%Y-%m-%d')+' 00:00:00:000000'
@@ -45,7 +43,8 @@ def insert_hour_data(hour_tag, codi_eoi, pollutant, value) -> None:
         return True
             
 
-def main():
+def main(db_uri):
+    engine = create_engine(db_uri)
     # Borrar datos de hace más de un dia
     with engine.connect() as conn:
         conn.execute('DELETE FROM air_quality_data WHERE date_hour <= %s;', (date_anterior+' 00:00:00'))
@@ -72,7 +71,8 @@ def main():
                 urban_area[medicion['area_urbana']].value,
                 int(medicion['altitud']),
                 float(medicion['latitud']),
-                float(medicion['longitud']))
+                float(medicion['longitud']),
+                engine)
             if err: return
             estaciones_vistas.add(medicion['codi_eoi'])
         
@@ -85,7 +85,8 @@ def main():
                     hour,
                     medicion['codi_eoi'],
                     medicion['contaminant'],
-                    float(medicion[hour]))
+                    float(medicion[hour]), 
+                    engine)
                 if err: return
 
         heroku_row_limit -= 1
@@ -93,4 +94,4 @@ def main():
             return
 
 if __name__ == '__main__':
-    main()
+    main(os.getenv("SQLALCHEMY_DATABASE_URI"))

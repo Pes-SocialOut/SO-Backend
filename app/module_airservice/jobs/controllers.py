@@ -25,7 +25,7 @@ def extract_data_from_api_job():
         return 'Auth failed', 403
     
     ini_time = datetime.now()
-    data_extraction()
+    data_extraction(os.getenv("SQLALCHEMY_DATABASE_URI"))
     delta = datetime.now() - ini_time
 
     return f'Data extracted in {delta.seconds} seconds\n', 200
