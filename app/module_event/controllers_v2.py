@@ -350,6 +350,34 @@ def leave_event(id):
 
     return jsonify({"message":f"el participante {user_id} ha abandonado CON EXITO"}), 200
 
+# GET method: todos los eventos a los que un usuario se ha unido
+@module_event_v2.route('/join', methods=['GET'])
+# RECIBE:
+# - GET HTTP request con la id del usuario que queremos solicitar
+# DEVUELVE:
+# - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
+# - 200: Un objeto JSON con los eventos a los que se a unido
+def get_user_joins():
+
+    try:
+        args = request.json
+    except:
+        return jsonify({"error_message": "The JSON body from the request is poorly defined"}), 400 
+
+    try:
+        user_id = args.get("user_id")
+    except:
+        return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
+
+    try:
+        ides_join = Participant.query.filter_by(user_id = user_id)
+        events = {}
+        for ides in ides_join:
+            events.add(Event.query.filter_by(id = ides).first())
+        return jsonify([event.toJSON() for event in events])
+    except:
+        return jsonify({"error_message": "The event doesn't exist"}), 400       
+
     
 
 
@@ -374,14 +402,20 @@ def get_event(id):
         return jsonify({"error_message": "The event doesn't exist"}), 400
 
 # GET/user_creator method: devuelve todos los eventos creados por un usuario
-@module_event_v2.route('/cretor/<id>', methods=['GET'])
+@module_event_v2.route('/creator', methods=['GET'])
 # RECIBE:
 # - GET HTTP request con la id del usuario del que se quieren obtener los eventos creados.
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida
 # - 201: Un objeto JSON con TODOS los parametros del evento con la id de la request
-def get_creations(id):
+def get_creations():
+
     try:
-        user_id = uuid.UUID(id)
+        args = request.json
+    except:
+        return jsonify({"error_message": "Mira el JSON body de la request, hay un atributo mal definido"}), 400 
+
+    try:
+        user_id = uuid.UUID(args.get("user_id")) 
     except:
         return jsonify({"error_message": "Event_id isn't a valid UUID"}), 400
 
@@ -442,25 +476,20 @@ def teardown_request(exception):
 
 #Dar like: un usuario le da like a un evento
 #POST method: crea un Like en la base de
-@module_event_v2.route('/id', methods=['POST'])
+@module_event_v2.route('<id del evento>/like', methods=['POST'])
 #RECIBE:
 #- POST HTTP request con los parametros en un JSON object en el body de la request.
-#      {name, description, date_started, date_end, user_creator, longitud, latitude, max_participants}
 #DEVUELVE:
 #- 400: Un objeto JSON con un mensaje de error
-#- 201: Un objeto JSON con todos los parametros del evento creado (con la id incluida) 
-def create_like():
+def create_like(id):
 
     try:
         args = request.json
     except:
         return jsonify({"error_message": "Mira el JSON body de la request, hay un atributo mal definido"}), 400
 
-    user_id = args.get("user_id")
-    event_id = args.get("event_id")
-
     try:
-        user_id = uuid.UUID(id)
+        user_id = uuid.UUID(args.get("user_id"))
     except:
         return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
 
@@ -489,12 +518,13 @@ def create_like():
 # - 200: Un objeto JSON confirmando que se ha eliminado correctamente
 def delete_like(id):
 
-    args = request.json
-    delete_user_id = args.get("user_id")
-    delete_event_id = args.get("event_id")
+    try:
+        args = request.json
+    except:
+        return jsonify({"error_message": "Mira el JSON body de la request, hay un atributo mal definido"}), 400
 
     try:
-        delete_user_id = uuid.UUID(id)
+        delete_user_id = uuid.UUID(args.get("user_id"))
     except:
         return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
 
@@ -511,29 +541,62 @@ def delete_like(id):
         return jsonify({"error_message": "The event doesn't exist"}), 400
 
 # GET method: todos los eventos a los que un usuario ha dado like
-@module_event_v2.route('/likes/<id>', methods=['GET'])
+@module_event_v2.route('/like', methods=['GET'])
 # RECIBE:
 # - GET HTTP request con la id del usuario que queremos solicitar
 # DEVUELVE:
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
 # - 200: Un objeto JSON confirmando que se ha eliminado correctamente
-def get_likes_by_user(id):
-
-    args = request.json
-    user_id = args.get("user_id")
+def get_likes_by_user():
 
     try:
-        user_id = uuid.UUID(id)
+        args = request.json
+    except:
+        return jsonify({"error_message": "The JSON body from the request is poorly defined"}), 400 
+
+    try:
+        user_id = args.get("user_id")
     except:
         return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
 
     try:
         ides_likes = Like.query.filter_by(user_id = user_id)
+        events = {}
         for ides in ides_likes:
-            events += Event.query.filter_by(id = ides).first()
+            events.add(Event.query.filter_by(id = ides).first())
         return jsonify([event.toJSON() for event in events])
     except:
         return jsonify({"error_message": "The event doesn't exist"}), 400        
+
+# GET method: saber si un usuario ha dado like a un evento
+@module_event_v2.route('/<id>/like', methods=['GET'])
+# RECIBE:
+# - GET HTTP request con la id del usuario que queremos consultar
+# DEVUELVE:
+# - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
+# - 200: Un objeto JSON confirmando que se ha eliminado correctamente
+def get_likes_by_user():
+
+    try:
+        args = request.json
+    except:
+        return jsonify({"error_message": "The JSON body from the request is poorly defined"}), 400 
+
+    try:
+        user_id_p = args.get("user_id")
+    except:
+        return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
+
+    try:
+        event_id_p = uuid.UUID(id)
+    except:
+        return jsonify({"error_message": "Event_id isn't a valid UUID"}), 400    
+
+    try:
+        Like.query.filter_by(user_id = user_id_p, event_id = event_id_p)
+        return jsonify({"message": "Le ha dado like"}), 200
+    except:
+        return jsonify({"message": "No le ha dado like"}), 200    
 
 # FILTRAR EVENTO: Retorna un conjunto de eventos en base a unas caracteristicas
 # Recibe:
