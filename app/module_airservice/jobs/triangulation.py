@@ -106,7 +106,7 @@ def generate_heat_map() -> None:
     #  Triangulation and quality mapped to colors (from a range)
     #  as color values of vertices
 
-if __name__ == '__main__':
+def main():
     engine = create_engine(os.getenv("SQLALCHEMY_DATABASE_URI"))
 
     air_data = fetch_air_data(engine)
@@ -115,3 +115,6 @@ if __name__ == '__main__':
     triangulation = triangulate(air_data)
     air_data = calculate_weighted_means_at_bounds(air_data, triangulation.triangles)
     save_current_triangulation(triangulation, air_data, engine)
+
+if __name__ == '__main__':
+    main()

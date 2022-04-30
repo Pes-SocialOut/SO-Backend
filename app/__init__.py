@@ -27,6 +27,7 @@ hashing = Hashing(app)
 from app.module_users.controllers import module_users_v1
 from app.module_event.controllers import module_event_v1
 from app.module_airservice.controllers import module_airservice_v1
+from app.module_airservice.jobs.controllers import module_airservice_jobs
 
 @app.errorhandler(404)
 def not_found(error):
@@ -40,3 +41,4 @@ def homepage():
 app.register_blueprint(module_users_v1)
 app.register_blueprint(module_event_v1)
 app.register_blueprint(module_airservice_v1)
+app.register_blueprint(module_airservice_jobs)
