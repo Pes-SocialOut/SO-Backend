@@ -13,7 +13,7 @@ module_airservice_jobs = Blueprint('air_jobs', __name__, url_prefix='/v1/air/job
 @module_airservice_jobs.route('/auth', methods=['GET'])
 def get_auth_for_jobs():
     rand_string = ''.join(random.choices(string.ascii_letters + string.digits, k=15))
-    access_token = create_access_token(identity=rand_string, expires_delta=timedelta(minutes=10))
+    access_token = create_access_token(identity=rand_string, expires_delta=timedelta(seconds=10))
     return jsonify({'str': rand_string, 'token': access_token})
 
 @module_airservice_jobs.route('/extract', methods=['GET'])
@@ -21,14 +21,11 @@ def get_auth_for_jobs():
 def extract_data_from_api_job():
     if 'auth' not in request.args: 
         return 'Forbidden', 403
-
-    good, stringss = check_encrypted_passphrase(get_jwt_identity(), request.args['auth'])
-
-    if not good:
-        return jsonify(stringss), 403
+    if not check_encrypted_passphrase(get_jwt_identity(), request.args['auth']):
+        return 'Auth failed', 403
     
     ini_time = datetime.now()
-    data_extraction()
+    data_extraction(os.getenv("SQLALCHEMY_DATABASE_URI"))
     delta = datetime.now() - ini_time
 
     return f'Data extracted in {delta.seconds} seconds\n', 200
@@ -42,7 +39,7 @@ def calculate_triangulation_job():
         return 'Auth failed', 403
     
     ini_time = datetime.now()
-    triangulation()
+    triangulation(os.getenv("SQLALCHEMY_DATABASE_URI"))
     delta = datetime.now() - ini_time
 
     return f'Triangulation calulated in {delta.seconds} seconds\n', 200
@@ -52,8 +49,5 @@ def check_encrypted_passphrase(token_str, encrypted_str):
     sub = subprocess.Popen(f'echo {encrypted_str} | openssl aes-256-cbc -d -a -pass pass:{secret_key} -iter 20', shell=True, stdout=subprocess.PIPE)
     decrypted_str = sub.stdout.read().decode('utf-8').strip()
     if token_str != decrypted_str:
-        enc = subprocess.Popen(f'echo {token_str} | openssl aes-256-cbc -a -salt -pass pass:{secret_key} -iter 20', shell=True, stdout=subprocess.PIPE)
-        enc_str = enc.stdout.read().decode('utf-8').strip()
-        dec = subprocess.Popen(f'echo {enc_str} | openssl aes-256-cbc -d -a -pass pass:{secret_key} -iter 20', shell=True, stdout=subprocess.PIPE)
-        return False, {'url_enc': encrypted_str, 'tkn': token_str, 'crypt': decrypted_str, 'should': dec.stdout.read().decode('utf-8').strip(), 'encr': enc_str, 'key':secret_key}
-    return True, None
+        return False
+    return True
