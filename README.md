@@ -170,3 +170,20 @@ $: pytest path_to/unit_test.py
 
 Si se quieren ver los prints que tenga el test hay que añadir el flag -s.
 Una vez esté corriendo deberias poder entrar a localhost:5000 en tu navegador y que te responda algo.
+
+# Heroku deployment
+
+Per a fer deployment (only Cesc):
+
+```
+heroku git:remote -a socialout-develop
+```
+
+Fer commit amb els fitxers. **IMPORTANT: NO PODEN HABER DOCKERFILES AL PROJECTE**
+```
+git push heroku develop:main
+```
+
+Per a executar les comandes a heroku entrar a heroku y obrir 'Run console'.
+
+Contactar con Guillem en caso de errores.

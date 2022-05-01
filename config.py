@@ -1,5 +1,6 @@
 #TEMPLATE TAKEN FROM DIGITAL_OCEAN PROJECT STRUCTURE
 import os
+from datetime import timedelta
 
 # Statement for enabling the development environment
 DEBUG = os.getenv('API_DEBUG')
@@ -31,3 +32,16 @@ CSRF_SESSION_KEY = os.getenv('API_SECRET_KEY')
 
 # Secret key for signing cookies
 SECRET_KEY = os.getenv('API_SECRET_KEY')
+
+# JWT related configurations
+JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
+JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
+JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
+
+# Mail related configurations
+MAIL_SERVER = 'smtp.gmail.com'
+MAIL_PORT = 465
+MAIL_USERNAME = os.getenv('MAIL_USERNAME')
+MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
+MAIL_USE_TLS = False
+MAIL_USE_SSL = True

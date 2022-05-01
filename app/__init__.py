@@ -2,6 +2,10 @@
 from flask import Flask
 # Import SQLAlchemy
 from flask_sqlalchemy import SQLAlchemy
+# Import JWT
+from flask_jwt_extended import JWTManager
+# Import hashing
+from flask_hashing import Hashing
 
 # Define the WSGI application object
 app = Flask(__name__)
@@ -13,11 +17,18 @@ app.config.from_object('config')
 # by modules and controllers
 db = SQLAlchemy(app)
 
+# Define the jwt manager for authentication
+jwt = JWTManager(app)
+
+# Define the hashing object for app
+hashing = Hashing(app)
+
 # Sample HTTP error handling
+from app.module_users.controllers import module_users_v1
 from app.module_event.controllers import module_event_v1
 from app.module_event.controllers_v2 import module_event_v2
 from app.module_airservice.controllers import module_airservice_v1
-from app.module_users.controllers import module_users_v1
+from app.module_airservice.jobs.controllers import module_airservice_jobs
 
 @app.errorhandler(404)
 def not_found(error):
@@ -32,3 +43,4 @@ app.register_blueprint(module_users_v1)
 app.register_blueprint(module_event_v1)
 app.register_blueprint(module_event_v2)
 app.register_blueprint(module_airservice_v1)
+app.register_blueprint(module_airservice_jobs)
