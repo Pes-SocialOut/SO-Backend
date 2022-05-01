@@ -1,9 +1,11 @@
 # Import flask dependencies
 # Import module models (i.e. User)
 from unicodedata import name
+import weakref
 from psycopg2 import IntegrityError
 import sqlalchemy
 from app.module_event.models import Event, Participant, Like
+from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity, jwt_required
 from datetime import datetime
 from flask import (Blueprint, request, jsonify)
 #from google.cloud import vision
@@ -33,6 +35,7 @@ max_latitude_catalunya = 42.85
 # - 400: Un objeto JSON con un mensaje de error
 # - 201: Un objeto JSON con todos los parametros del evento creado (con la id incluida) 
 @module_event_v2.route('/', methods=['POST'])
+@jwt_required(optional=False)
 def create_event():
     try:
         args = request.json
@@ -85,6 +88,7 @@ def create_event():
 # - 400: Un objeto JSON con un mensaje de error
 # - 200: Un objeto JSON con un mensaje de evento modificado con exito 
 @module_event_v2.route('/<id>', methods=['PUT'])
+@jwt_required(optional=False)
 def modify_events_v2(id):
     try:
         event_id = uuid.UUID(id)
@@ -110,6 +114,10 @@ def modify_events_v2(id):
     # restricion: solo el usuario creador puede editar su evento
     if event.user_creator != uuid.UUID(args.get("user_creator")):
         return jsonify({"error_message": "solo el usuario creador puede modificar su evento"}), 400
+
+    auth_id = get_jwt_identity()
+    if event.user_creator != auth_id:
+        return jsonify({"error_message": "A user cannot update the events of others"}), 400       
 
     event.name = args.get("name")
     event.description = args.get("description")
@@ -256,6 +264,7 @@ def detect_safe_search_uri(uri):
 # - 400: Un objeto JSON con un mensaje de error
 # - 200: Un objeto JSON con un mensaje de el usuario se ha unido con exito
 @module_event_v2.route('/<id>/join', methods=['POST'])
+@jwt_required(optional=False)
 def join_event(id):
     try:
         event_id = uuid.UUID(id)
@@ -278,6 +287,10 @@ def join_event(id):
         user_id = uuid.UUID(args.get("user_id"))
     except:
         return jsonify({"error_message":f"la user_id {user_id} no es una UUID valida"}), 400
+
+    auth_id = get_jwt_identity()
+    if user_id != auth_id:
+        return jsonify({"error_message": "A user cannot join a event for others"}), 400   
                 
     # restriccion: el usuario creador no se puede unir a su propio evento (ya se une automaticamente al crear el evento)
     if event.user_creator == user_id:
@@ -305,6 +318,7 @@ def join_event(id):
 # - 400: Un objeto JSON con un mensaje de error
 # - 200: Un objeto JSON con un mensaje de el usuario ha abandonado el evento CON EXITO
 @module_event_v2.route('/<id>/leave', methods=['POST'])
+@jwt_required(optional=False)
 def leave_event(id):
     try:
         event_id = uuid.UUID(id)
@@ -325,6 +339,11 @@ def leave_event(id):
         user_id = uuid.UUID(args.get("user_id"))
     except:
         return jsonify({"error_message":f"la user_id {user_id} no es una UUID valida"}), 400
+
+
+    auth_id = get_jwt_identity()
+    if user_id != auth_id:
+        return jsonify({"error_message": "A user cannot leave a event for others"}), 400   
 
     # restriccion: el usuario no es participante del evento
     try:
@@ -357,6 +376,7 @@ def leave_event(id):
 # DEVUELVE:
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
 # - 200: Un objeto JSON con los eventos a los que se a unido
+@jwt_required(optional=False)
 def get_user_joins():
 
     try:
@@ -389,6 +409,7 @@ def get_user_joins():
 # DEVUELVE:
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
 # - 201: Un objeto JSON con TODOS los parametros del evento con la id de la request
+@jwt_required(optional=False)
 def get_event(id):
     try:
         event_id = uuid.UUID(id)
@@ -407,6 +428,7 @@ def get_event(id):
 # - GET HTTP request con la id del usuario del que se quieren obtener los eventos creados.
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida
 # - 201: Un objeto JSON con TODOS los parametros del evento con la id de la request
+@jwt_required(optional=False)
 def get_creations():
 
     try:
@@ -433,6 +455,7 @@ def get_creations():
 # DEVUELVE:
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
 # - 200: Un objeto JSON confirmando que se ha eliminado correctamente
+@jwt_required(optional=False)
 def delete_event(id):
     try:
         user_id = uuid.UUID(id)
@@ -441,10 +464,18 @@ def delete_event(id):
 
     try:
         eventb = Event.query.filter_by(id = user_id)
-        eventb.delete()
-        return jsonify({"message": "Successful DELETE"}), 202
     except :
         return jsonify({"error_message": "The event doesn't exist"}), 400
+
+    auth_id = get_jwt_identity()
+    if eventb.user_creator != auth_id:
+        return jsonify({"error_message": "A user cannot delete events if they are not the creator"}), 400          
+
+    try:
+        eventb.delete()
+        return jsonify({"message": "Successful DELETE"}), 202
+    except Exception as e:
+        return jsonify({"error_message": e}), 400
 
 
 # GET ALL method: returns the information of all the events of the database
@@ -454,6 +485,7 @@ def delete_event(id):
 # DEVUELVE:
 # - 400: Un objeto JSON con los posibles mensajes de error
 # - 201: Un objeto JSON con todos los eventos que hay en el sistema
+@jwt_required(optional=False)
 def get_all_events():
     try:
         all_events = Event.get_all()
@@ -481,6 +513,7 @@ def teardown_request(exception):
 #- POST HTTP request con los parametros en un JSON object en el body de la request.
 #DEVUELVE:
 #- 400: Un objeto JSON con un mensaje de error
+@jwt_required(optional=False)
 def create_like(id):
 
     try:
@@ -492,6 +525,10 @@ def create_like(id):
         user_id = uuid.UUID(args.get("user_id"))
     except:
         return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
+
+    auth_id = get_jwt_identity()
+    if user_id != auth_id:
+        return jsonify({"error_message": "A user can't like for others"}), 400    
 
     try:
         event_id = uuid.UUID(id)
@@ -516,6 +553,7 @@ def create_like(id):
 # DEVUELVE:
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
 # - 200: Un objeto JSON confirmando que se ha eliminado correctamente
+@jwt_required(optional=False)
 def delete_like(id):
 
     try:
@@ -527,6 +565,10 @@ def delete_like(id):
         delete_user_id = uuid.UUID(args.get("user_id"))
     except:
         return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
+
+    auth_id = get_jwt_identity()
+    if delete_user_id != auth_id:
+        return jsonify({"error_message": "A user can't remove like for others"}), 400       
 
     try:
         delete_event_id = uuid.UUID(id)
@@ -547,6 +589,7 @@ def delete_like(id):
 # DEVUELVE:
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
 # - 200: Un objeto JSON confirmando que se ha eliminado correctamente
+@jwt_required(optional=False)
 def get_likes_by_user():
 
     try:
@@ -575,6 +618,7 @@ def get_likes_by_user():
 # DEVUELVE:
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
 # - 200: Un objeto JSON confirmando que se ha eliminado correctamente
+@jwt_required(optional=False)
 def get_likes_from_user():
 
     try:
@@ -604,6 +648,7 @@ def get_likes_from_user():
 #       {name, date_started, date_end}
 # Devuelve:
 @module_event_v2.route('/Filter', methods=['GET'])
+@jwt_required(optional=False)
 def filter_by():
     try:
         args = request.json
