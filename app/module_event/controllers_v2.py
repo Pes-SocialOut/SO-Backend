@@ -476,7 +476,7 @@ def teardown_request(exception):
 
 #Dar like: un usuario le da like a un evento
 #POST method: crea un Like en la base de
-@module_event_v2.route('<id del evento>/like', methods=['POST'])
+@module_event_v2.route('<id>/like', methods=['POST'])
 #RECIBE:
 #- POST HTTP request con los parametros en un JSON object en el body de la request.
 #DEVUELVE:
@@ -510,7 +510,7 @@ def create_like(id):
     return jsonify(LikeJSON), 201
 
 # DELETE method: deletes a like from the database
-@module_event_v2.route('/<id>', methods=['DELETE'])
+@module_event_v2.route('/<id>/like', methods=['DELETE'])
 # RECIBE:
 # - DELETE HTTP request con la id del evento que se quiere eliminar
 # DEVUELVE:
@@ -575,12 +575,12 @@ def get_likes_by_user():
 # DEVUELVE:
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
 # - 200: Un objeto JSON confirmando que se ha eliminado correctamente
-def get_likes_by_user():
+def get_likes_from_user():
 
     try:
         args = request.json
     except:
-        return jsonify({"error_message": "The JSON body from the request is poorly defined"}), 400 
+        return jsonify({"error_message": "The JSON body from the request is poorly defined"}), 400  
 
     try:
         user_id_p = args.get("user_id")
