@@ -9,7 +9,7 @@ from app.module_airservice.models import air_quality_station, air_quality_data, 
 
 
 # Import time libraries
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 # Import pickle library to save python objects to file
 import pickle as pkl
@@ -19,32 +19,26 @@ module_airservice_v1 = Blueprint('air', __name__, url_prefix='/v1/air')
 
 @module_airservice_v1.route('/stations/<id>', methods=['GET'])
 def air_station_readings(id):
-    qtime = get_date_time_query_string()
-    query_result = db.session.query(air_quality_station, air_quality_data) \
-        .outerjoin(air_quality_data, air_quality_station.eoi_code == air_quality_data.station_eoi_code) \
-        .filter(air_quality_station.eoi_code == id) \
-        .filter(air_quality_data.date_hour == qtime).all()
-
-    if len(query_result) == 0:
-        query_result = air_quality_station.query.filter_by(eoi_code = id).first()
-        if query_result == None:
-            return jsonify({"error_message":f"Station with eoi_code {id} is not registered"}), 404
-        st = query_result.toJSON()
-        st['pollutants'] = []
-        return jsonify(st), 200
-    
-    response = query_result[0][0].toJSON()
-    response['pollutants'] = []
-    for _, measure in query_result:
+    query_result = air_quality_station.query.filter_by(eoi_code = id).first()
+    if query_result == None:
+        return jsonify({"error_message":f"Station with eoi_code {id} is not registered"}), 404
+    st = query_result.toJSON()
+    st['pollutants'] = []
+    query_result = db.session.query(air_quality_data, pollutant) \
+        .join(pollutant) \
+        .filter(air_quality_data.station_eoi_code == id) \
+        .filter(air_quality_data.date_hour == get_date_time_query_string(st['last_calculated_at'])) \
+        .all()
+    for measure, poll in query_result:
         ms = measure.toJSON()
         del ms['date_hour']
         del ms['station_eoi_code']
-        response['pollutants'].append(ms)
-    
-    return jsonify(response), 200
+        ms['units'] = poll.units
+        st['pollutants'].append(ms)
+    return jsonify(st), 200
 
-def get_date_time_query_string():
-    yd = datetime.now() - timedelta(days = 1)
+def get_date_time_query_string(now):
+    yd = now - timedelta(days = 1)
     if yd.minute > 30:
         yd += timedelta(hours = 1)
     return f'{yd.year}-{yd.month}-{yd.day} {yd.hour}:00:00'
@@ -100,8 +94,7 @@ def general_quality_at_a_point():
         json_stations.append({'id': s2[0], 'long': s2[1], 'lat': s2[2], 'pollution': s2[3]})
 
     response = jsonify({'pollution': general_quality, 'triangulation_last_calculated_at': triangulation_upd_time, 'surrounding_measuring_stations': json_stations})
-    response.status_code = 200
-    return response
+    return response, 200
 
 def barycentric_interpolation(x1, y1, x2, y2, x3, y3, xp, yp):
     w0 = ((y2-y3)*(xp-x3)+(x3-x2)*(yp-y3))/((y2-y3)*(x1-x3)+(x3-x2)*(y1-y3))
