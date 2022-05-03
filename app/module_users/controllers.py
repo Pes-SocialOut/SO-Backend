@@ -170,7 +170,7 @@ def check_register_status_google(args):
     try:
         idinfo = requests.get(f'https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}')
         #idinfo = id_token.verify_oauth2_token(token, requests.Request(), os.getenv('GOOGLE_CLIENT_ID'))
-        email = idinfo['email']
+        email = idinfo.json()['email']
     except:
         return jsonify({'error_message': 'Google token was invalid'}), 400
     user_id = user_id_for_email(email)
@@ -275,7 +275,7 @@ def register_google():
     try:
         idinfo = requests.get(f'https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}')
         #idinfo = id_token.verify_oauth2_token(token, requests.Request(), os.getenv('GOOGLE_CLIENT_ID'))
-        email = idinfo['email']
+        email = idinfo.json()['email']
     except:
         return jsonify({'error_message': 'Google token was invalid'}), 400
     
@@ -362,7 +362,7 @@ def check_login_status_google(args):
     try:
         idinfo = requests.get(f'https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}')
         #idinfo = id_token.verify_oauth2_token(token, requests.Request(), os.getenv('GOOGLE_CLIENT_ID'))
-        email = idinfo['email']
+        email = idinfo.json()['email']
     except:
         return jsonify({'error_message': 'Google token was invalid'}), 400
     user_id = user_id_for_email(email)
@@ -404,7 +404,7 @@ def login_google():
     try:
         idinfo = requests.get(f'https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}')
         #idinfo = id_token.verify_oauth2_token(token, requests.Request(), os.getenv('GOOGLE_CLIENT_ID'))
-        email = idinfo['email']
+        email = idinfo.json()['email']
     except:
         return jsonify({'error_message': 'Google token was invalid'}), 400
     user = User.query.filter_by(email = email).first()
@@ -483,7 +483,7 @@ def link_google_auth_method(args):
     try:
         idinfo = requests.get(f'https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}')
         #idinfo = id_token.verify_oauth2_token(token, requests.Request(), os.getenv('GOOGLE_CLIENT_ID'))
-        email = idinfo['email']
+        email = idinfo.json()['email']
     except:
         return jsonify({'error_message': 'Google token was invalid'}), 400
 
