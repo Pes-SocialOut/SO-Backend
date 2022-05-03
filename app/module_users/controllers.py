@@ -1,6 +1,7 @@
 # Import flask dependencies
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity, jwt_required
+from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity, jwt_required, get_jwt
+from datetime import datetime, timedelta, timezone
 #from google.oauth2 import id_token
 #from google.auth.transport import requests
 import requests
@@ -420,7 +421,13 @@ def login_google():
 def refresh():
     identity = get_jwt_identity()
     access_token = create_access_token(identity=identity)
-    return jsonify(access_token=access_token)
+    exp_timestamp = get_jwt()["exp"]
+    now = datetime.now(timezone.utc)
+    target_timestamp = datetime.timestamp(now + timedelta(days=2))
+    if target_timestamp > exp_timestamp:
+        refresh_token = create_refresh_token(identity=identity)
+        return jsonify({'id': identity, 'access_token': access_token, 'refresh_token': refresh_token})
+    return jsonify({'id': identity, 'access_token': access_token})
 
 
 ########################################## ADD AUTH METHOD ########################################
