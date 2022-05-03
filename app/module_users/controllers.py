@@ -1,8 +1,9 @@
 # Import flask dependencies
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity, jwt_required
-from google.oauth2 import id_token
-from google.auth.transport import requests
+#from google.oauth2 import id_token
+#from google.auth.transport import requests
+import requests
 import uuid
 
 # Import the database object from the main app module
@@ -167,7 +168,8 @@ def check_register_status_google(args):
     token = args['token']
     # Get google email from token
     try:
-        idinfo = id_token.verify_oauth2_token(token, requests.Request(), os.getenv('GOOGLE_CLIENT_ID'))
+        idinfo = requests.get(f'https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}')
+        #idinfo = id_token.verify_oauth2_token(token, requests.Request(), os.getenv('GOOGLE_CLIENT_ID'))
         email = idinfo['email']
     except:
         return jsonify({'error_message': 'Google token was invalid'}), 400
@@ -271,7 +273,8 @@ def register_google():
 
     # Get google email from token
     try:
-        idinfo = id_token.verify_oauth2_token(token, requests.Request(), os.getenv('GOOGLE_CLIENT_ID'))
+        idinfo = requests.get(f'https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}')
+        #idinfo = id_token.verify_oauth2_token(token, requests.Request(), os.getenv('GOOGLE_CLIENT_ID'))
         email = idinfo['email']
     except:
         return jsonify({'error_message': 'Google token was invalid'}), 400
@@ -357,7 +360,8 @@ def check_login_status_google(args):
     token = args['token']
     # Get google email from token
     try:
-        idinfo = id_token.verify_oauth2_token(token, requests.Request(), os.getenv('GOOGLE_CLIENT_ID'))
+        idinfo = requests.get(f'https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}')
+        #idinfo = id_token.verify_oauth2_token(token, requests.Request(), os.getenv('GOOGLE_CLIENT_ID'))
         email = idinfo['email']
     except:
         return jsonify({'error_message': 'Google token was invalid'}), 400
@@ -398,7 +402,8 @@ def login_google():
     token = request.json['token']
     # Get google email from token
     try:
-        idinfo = id_token.verify_oauth2_token(token, requests.Request(), os.getenv('GOOGLE_CLIENT_ID'))
+        idinfo = requests.get(f'https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}')
+        #idinfo = id_token.verify_oauth2_token(token, requests.Request(), os.getenv('GOOGLE_CLIENT_ID'))
         email = idinfo['email']
     except:
         return jsonify({'error_message': 'Google token was invalid'}), 400
@@ -476,7 +481,8 @@ def link_google_auth_method(args):
     token = args['token']
     # Get google email from token
     try:
-        idinfo = id_token.verify_oauth2_token(token, requests.Request(), os.getenv('GOOGLE_CLIENT_ID'))
+        idinfo = requests.get(f'https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}')
+        #idinfo = id_token.verify_oauth2_token(token, requests.Request(), os.getenv('GOOGLE_CLIENT_ID'))
         email = idinfo['email']
     except:
         return jsonify({'error_message': 'Google token was invalid'}), 400
