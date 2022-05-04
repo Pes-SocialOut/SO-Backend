@@ -44,14 +44,14 @@ def get_date_time_query_string(now):
     return f'{yd.year}-{yd.month}-{yd.day} {yd.hour}:00:00'
 
 
-@module_airservice_v1.route('/stations/', methods=['GET'])
+@module_airservice_v1.route('/stations', methods=['GET'])
 def get_all_air_stations_id_name_location_pollution():
     query_result = air_quality_station.query.all()
     response = [{'id': s.eoi_code, 'name':s.name, 'long': s.longitude, 'lat': s.latitude, 'pollution': s.air_condition_scale} for s in query_result]
     return jsonify(response), 200
 
 
-@module_airservice_v1.route('/location/', methods=['GET'])
+@module_airservice_v1.route('/location', methods=['GET'])
 def general_quality_at_a_point():
     if not (request.args.get('long') and request.args.get('lat')):
         return jsonify({"error_message":"Must contain a point defined by query parameters <long> and <lat>"}), 400
@@ -101,7 +101,7 @@ def barycentric_interpolation(x1, y1, x2, y2, x3, y3, xp, yp):
     w1 = ((y3-y1)*(xp-x3)+(x1-x3)*(yp-y3))/((y2-y3)*(x1-x3)+(x3-x2)*(y1-y3))
     return w0, w1, 1-w0-w1
 
-@module_airservice_v1.route('/location/', methods=['POST'])
+@module_airservice_v1.route('/location', methods=['POST'])
 def general_quality_at_multiple_points():
     if 'points' not in request.json:
         return jsonify({'error_message':'Must contain json with "points" list, each point {ref_id, long, lat}'}), 400
