@@ -15,6 +15,8 @@ DATABASE_CONNECT_OPTIONS = {}
 
 MIGRATIONS_SQLALCHEMY_DATABASE_URI = os.getenv('MIGRATIONS_SQLALCHEMY_DATABASE_URI')
 
+GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+
 # Application threads. A common general assumption is
 # using 2 per available processor cores - to handle
 # incoming requests using one and performing background

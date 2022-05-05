@@ -5,6 +5,7 @@ certifi==2021.10.8
 charset-normalizer==2.0.12
 click==7.1.2
 cycler==0.11.0
+decorator==5.1.1
 Flask==1.1.4
 Flask-Hashing==1.1
 Flask-JWT-Extended==4.3.1
@@ -14,6 +15,8 @@ Flask-SQLAlchemy==2.5.1
 fonttools==4.31.2
 google-auth==2.6.6
 greenlet==1.1.2
+grpcio==1.44.0
+grpcio-status==1.44.0
 gunicorn==20.1.0
 idna==3.3
 importlib-metadata==4.11.3
@@ -27,6 +30,8 @@ matplotlib==3.5.1
 numpy==1.21.3
 packaging==21.3
 Pillow==9.0.1
+proto-plus==1.20.3
+protobuf==3.20.0
 psycopg2-binary==2.9.3
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
@@ -40,5 +45,6 @@ soupsieve==2.3.2.post1
 SQLAlchemy==1.4.32
 typing_extensions==4.1.1
 urllib3==1.26.9
+validators==0.18.2
 Werkzeug==1.0.1
 zipp==3.7.0
