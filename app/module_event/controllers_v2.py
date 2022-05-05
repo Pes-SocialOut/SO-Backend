@@ -2,7 +2,6 @@
 # Import module models (i.e. User)
 from unicodedata import name
 import weakref
-from psycopg2 import IntegrityError
 import sqlalchemy
 from app.module_event.models import Event, Participant, Like
 from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity, jwt_required
@@ -115,9 +114,9 @@ def modify_events_v2(id):
     if event.user_creator != uuid.UUID(args.get("user_creator")):
         return jsonify({"error_message": "solo el usuario creador puede modificar su evento"}), 400
 
-    auth_id = get_jwt_identity()
-    if event.user_creator != auth_id:
-        return jsonify({"error_message": "A user cannot update the events of others"}), 400       
+    # auth_id = get_jwt_identity()
+    # if event.user_creator != auth_id:
+    #     return jsonify({"error_message": "A user cannot update the events of others"}), 400       
 
     event.name = args.get("name")
     event.description = args.get("description")
@@ -399,6 +398,57 @@ def get_user_joins():
         return jsonify({"error_message": "The event doesn't exist"}), 400       
 
     
+# GET method: los 10 eventos con el mayor numero de likes
+@module_event_v2.route('/topten', methods=['GET'])
+# DEVUELVE:
+# - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
+# - 200: Un objeto JSON con los top 10 eventos con mas likes
+@jwt_required(optional=False)
+def get_top_ten_events():
+    # Coger todos los likes de la DB
+    try:
+        all_likes = Like.get_all()
+    except:
+        return jsonify({"error_message": "error getting likes"}), 400    
+    
+    # Guardar todos los likes de cada evento en un array Y FUNCIONA
+    try:
+        likes_in_events = {}
+        for like in all_likes:
+            s = str(like.event_id)
+            if s in likes_in_events:
+                likes_in_events[s] = likes_in_events[s] + 1
+            else:
+                likes_in_events[s] = 1
+    except:
+        return jsonify({"error_message": "error asignando vector likes"}), 400
+
+    # Guardar los top 10 eventos con mas likes en un array
+    i = 1
+    top_ten = []
+    while i <= 10:
+        most_likes = 0
+        most_liked_event = None
+        for event in likes_in_events:
+            if likes_in_events[event] >= most_likes:
+                most_liked_event = event
+                most_likes = likes_in_events[event]
+        if most_liked_event != None:
+            top_ten.append(most_liked_event)
+            likes_in_events.pop(most_liked_event)
+        i += 1
+    
+    # Coger la info de cada evento
+    top_ten_with_info = []
+    for event in top_ten:
+        try:
+            event_to_add = Event.query.filter_by(id=event).first()
+        except:
+            return jsonify({"error_message": "error en coger el top ten"}), 400
+        
+        top_ten_with_info.append(event_to_add)
+
+    return jsonify([event.toJSON() for event in top_ten_with_info])
 
 
 
@@ -467,7 +517,7 @@ def delete_event(id):
     except :
         return jsonify({"error_message": "The event doesn't exist"}), 400
 
-    auth_id = get_jwt_identity()
+    auth_id = uuid.UUID(get_jwt_identity())
     if eventb.user_creator != auth_id:
         return jsonify({"error_message": "A user cannot delete events if they are not the creator"}), 400          
 
@@ -515,7 +565,6 @@ def teardown_request(exception):
 #- 400: Un objeto JSON con un mensaje de error
 @jwt_required(optional=False)
 def create_like(id):
-
     try:
         args = request.json
     except:
@@ -526,7 +575,7 @@ def create_like(id):
     except:
         return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
 
-    auth_id = get_jwt_identity()
+    auth_id = uuid.UUID(get_jwt_identity())
     if user_id != auth_id:
         return jsonify({"error_message": "A user can't like for others"}), 400    
 
@@ -537,11 +586,12 @@ def create_like(id):
       
     Nuevo_like = Like(user_id, event_id)
     
-    # TODO Encontrar errores de base de datos como null value, usuario no existe, etc.
     try:
         Nuevo_like.save()
+    except sqlalchemy.exc.IntegrityError:
+        return jsonify({"error_message": "El usuario ya ha dado like a este evento"})
     except:
-        return jsonify({"error_message": " "})
+        return jsonify({"error_message": "Error nuevo de base de datos, ¿cual es?"})
     
     LikeJSON = Nuevo_like.toJSON()
     return jsonify(LikeJSON), 201
@@ -566,9 +616,9 @@ def delete_like(id):
     except:
         return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
 
-    auth_id = get_jwt_identity()
+    auth_id = uuid.UUID(get_jwt_identity())
     if delete_user_id != auth_id:
-        return jsonify({"error_message": "A user can't remove like for others"}), 400       
+        return jsonify({"error_message": "A user can't remove likes for others"}), 400    
 
     try:
         delete_event_id = uuid.UUID(id)

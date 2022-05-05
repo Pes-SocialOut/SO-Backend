@@ -116,7 +116,7 @@ class Like(db.Model):
     #To SAVE a row from the table
     def save(self):
         db.session.add(self)
-        db.session.commit
+        db.session.commit()
 
     #To GET ALL ROWS of the table
     def get_all():
