@@ -1,5 +1,6 @@
 # Import flask dependencies
 # Import module models (i.e. User)
+from asyncio import events
 from unicodedata import name
 import weakref
 from psycopg2 import IntegrityError
@@ -35,7 +36,7 @@ max_latitude_catalunya = 42.85
 # - 400: Un objeto JSON con un mensaje de error
 # - 201: Un objeto JSON con todos los parametros del evento creado (con la id incluida) 
 @module_event_v2.route('/', methods=['POST'])
-@jwt_required(optional=False)
+#@jwt_required(optional=False)
 def create_event():
     try:
         args = request.json
@@ -116,7 +117,7 @@ def modify_events_v2(id):
         return jsonify({"error_message": "solo el usuario creador puede modificar su evento"}), 400
 
     auth_id = get_jwt_identity()
-    if event.user_creator != auth_id:
+    if str(event.user_creator) != auth_id:
         return jsonify({"error_message": "A user cannot update the events of others"}), 400       
 
     event.name = args.get("name")
@@ -289,7 +290,7 @@ def join_event(id):
         return jsonify({"error_message":f"la user_id {user_id} no es una UUID valida"}), 400
 
     auth_id = get_jwt_identity()
-    if user_id != auth_id:
+    if args.get("user_id") != auth_id:
         return jsonify({"error_message": "A user cannot join a event for others"}), 400   
                 
     # restriccion: el usuario creador no se puede unir a su propio evento (ya se une automaticamente al crear el evento)
@@ -342,7 +343,7 @@ def leave_event(id):
 
 
     auth_id = get_jwt_identity()
-    if user_id != auth_id:
+    if args.get("user_id") != auth_id:
         return jsonify({"error_message": "A user cannot leave a event for others"}), 400   
 
     # restriccion: el usuario no es participante del evento
@@ -468,7 +469,7 @@ def delete_event(id):
         return jsonify({"error_message": "The event doesn't exist"}), 400
 
     auth_id = get_jwt_identity()
-    if eventb.user_creator != auth_id:
+    if str(eventb.user_creator) != auth_id:
         return jsonify({"error_message": "A user cannot delete events if they are not the creator"}), 400          
 
     try:
@@ -527,7 +528,7 @@ def create_like(id):
         return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
 
     auth_id = get_jwt_identity()
-    if user_id != auth_id:
+    if args.get("user_id") != auth_id:
         return jsonify({"error_message": "A user can't like for others"}), 400    
 
     try:
@@ -567,7 +568,7 @@ def delete_like(id):
         return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
 
     auth_id = get_jwt_identity()
-    if delete_user_id != auth_id:
+    if args.get("user_id") != auth_id:
         return jsonify({"error_message": "A user can't remove like for others"}), 400       
 
     try:
@@ -688,3 +689,20 @@ def filter_by():
             return jsonify([event.toJSON() for event in events_filter])
     except Exception as e:
         return jsonify({"error_message": e}), 400
+
+# Ultimos EVENTO: Retorna un conjunto con los 10 eventos mas recientes
+# Recibe:
+# GET HTTP
+# Devuelve:
+@module_event_v2.route('/Lasts', methods=['GET'])
+#@jwt_required(optional=False)
+def lastest_events():
+    try:
+        lasts_events = Event.query.all().order_by(events.date_creation.desc())
+        lasts_events = lasts_events.limit(10)
+        return jsonify([event.toJSON() for event in lasts_events])
+    except Exception as e:
+        return jsonify({"error_message": e}), 400
+
+
+     

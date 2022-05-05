@@ -3,6 +3,7 @@
 from sqlalchemy import ForeignKey
 from app import db
 from sqlalchemy.dialects.postgresql import UUID
+from datetime import datetime
 import uuid
 
 # Define an Event model
@@ -20,6 +21,8 @@ class Event(db.Model):
     date_started = db.Column(db.DateTime, nullable=False)
     # End date of the event
     date_end = db.Column(db.DateTime, nullable=False)
+    # Date of creation of the event
+    date_creation = db.Column(db.DateTime, nullable=False, default =  datetime.now())
     # Creator of the event (with FK)
     user_creator = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id') , nullable=False)
     # Longitude of the location where the event will take taking place
@@ -51,9 +54,9 @@ class Event(db.Model):
     def __repr__(self):
         return '''Event(id: ' + str(self.id) + ', name: ' + str(self.name) + ', description: ' + str(self.description) +
                 ', date_started: ' + str(self.date_started) + ', date_end: ' + str(self.date_end) +
-                ', user_creator: ' + str(self.user_creator) + ', longitud: ' + str(self.longitud) +
-                ', latitude: ' + str(self.latitude) + ', max_participants: ' + str(self.max_participants) +
-                ', event_image_uri: ' + str(self.event_image_uri) ').'''
+                ', date_creation: ' + str(self.date_creation) + ', user_creator: ' + str(self.user_creator) + 
+                ', longitud: ' + str(self.longitud) + ', latitude: ' + str(self.latitude) + 
+                ', max_participants: ' + str(self.max_participants) + ', event_image_uri: ' + str(self.event_image_uri) ').'''
 
     # To DELETE a row from the table
     def delete(self):
@@ -78,6 +81,7 @@ class Event(db.Model):
             "description": self.description,
             "date_started": self.date_started,
             "date_end": self.date_end,
+            "date_creation": self.date_creation,
             "user_creator": self.user_creator,
             "longitud": self.longitud,
             "latitude": self.latitude,
@@ -116,7 +120,7 @@ class Like(db.Model):
     #To SAVE a row from the table
     def save(self):
         db.session.add(self)
-        db.session.commit
+        db.session.commit()
 
     #To GET ALL ROWS of the table
     def get_all():
