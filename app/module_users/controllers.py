@@ -185,8 +185,22 @@ def check_register_status_google(args):
 
 def check_register_status_facebook(args):
     if 'token' not in args:
-        return jsonify({'error_message': 'Facebook auth method must indicate a token'}), 400
-    return jsonify({'error_message': 'Facebook register not yet implemented'}), 501
+        return jsonify({'error_message': 'Google auth method must indicate a token'}), 400
+    token = args['token']
+    # Get email from facebook token
+    try:
+        idinfo = requests.get(f'https://graph.facebook.com/me?fields=email&access_token={token}')
+        email = idinfo.json()['email']
+    except:
+        return jsonify({'error_message': 'Facebook token was invalid'}), 400
+    user_id = user_id_for_email(email)
+    if user_id == None:
+        return jsonify({'action': 'continue'}), 200
+    # check if it is google
+    auth_methods = authentication_methods_for_user_id(user_id)
+    if 'facebook' in auth_methods:
+        return jsonify({'action': 'error', 'error_message': 'User with this email already exists'}), 200
+    return jsonify({'action': 'link_auth', 'alternative_auths': auth_methods}), 200
 
 
 @module_users_v1.route('/register/socialout', methods=['POST'])
@@ -322,7 +336,35 @@ def register_facebook():
     languages = request.json['languages']
     hobbies = request.json['hobbies']
 
-    return jsonify({'error_message': 'Facebook login not yet implemented'}), 501
+    # Get email from facebook token
+    try:
+        idinfo = requests.get(f'https://graph.facebook.com/me?fields=email&access_token={token}')
+        email = idinfo.json()['email']
+    except:
+        return jsonify({'error_message': 'Google token was invalid'}), 400
+    
+    # Check no other user exists with that email
+    if user_id_for_email(email) != None:
+        return jsonify({'error_message': 'User with this email already exists'}), 400
+
+    # Add user to bd
+    user_id = uuid.uuid4()
+    user = User(user_id, username, email, None, None, description, hobbies)
+    try:
+        user.save()
+    except:
+        return jsonify({'error_message': 'Something went wrong when creating new user in db'}), 500
+    
+    # Add languages to user (once implemented)
+    
+    # Add facebook auth method to user
+    facebook_auth = FacebookAuth(user_id, token)
+    try:
+        facebook_auth.save()
+    except:
+        return jsonify({'error_message': 'Something went wrong when adding auth method google to user'}), 500
+    
+    return generate_tokens(str(user_id)), 200
 
 
 ############################################# LOGIN ###############################################
@@ -378,7 +420,21 @@ def check_login_status_google(args):
 def check_login_status_facebook(args):
     if 'token' not in args:
         return jsonify({'error_message': 'Facebook auth method must indicate a token'}), 400
-    return jsonify({'error_message': 'Facebook login not yet implemented'}), 501
+    token = args['token']
+    # Get email from facebook token
+    try:
+        idinfo = requests.get(f'https://graph.facebook.com/me?fields=email&access_token={token}')
+        email = idinfo.json()['email']
+    except:
+        return jsonify({'error_message': 'Facebook token was invalid'}), 400
+    user_id = user_id_for_email(email)
+    if user_id == None:
+        return jsonify({'action': 'error', 'error_message': 'Account does not exist'}), 200
+    # check if it is facebook
+    auth_methods = authentication_methods_for_user_id(user_id)
+    if 'facebook' in auth_methods:
+        return jsonify({'action': 'continue'}), 200
+    return jsonify({'action': 'link_auth', 'alternative_auths': auth_methods}), 200
 
 @module_users_v1.route('/login/socialout', methods=['POST'])
 def login_socialout():
@@ -413,6 +469,25 @@ def login_google():
         return jsonify({'error_message': 'User does not exist'}), 400 
     google_auth = GoogleAuth.query.filter_by(id = user.id).first()
     if google_auth == None:
+        return jsonify({'error_message': 'Authentication method not available for this email'}), 400 
+    return generate_tokens(str(user.id)), 200
+
+@module_users_v1.route('/login/facebook', methods=['POST'])
+def login_facebook():
+    if 'token' not in request.json:
+        return jsonify({'error_message': 'Missing credentials in json body.'}), 400 
+    token = request.json['token']
+    # Get email from facebook token
+    try:
+        idinfo = requests.get(f'https://graph.facebook.com/me?fields=email&access_token={token}')
+        email = idinfo.json()['email']
+    except:
+        return jsonify({'error_message': 'Facebook token was invalid'}), 400
+    user = User.query.filter_by(email = email).first()
+    if user == None:
+        return jsonify({'error_message': 'User does not exist'}), 400 
+    facebook_auth = FacebookAuth.query.filter_by(id = user.id).first()
+    if facebook_auth == None:
         return jsonify({'error_message': 'Authentication method not available for this email'}), 400 
     return generate_tokens(str(user.id)), 200
 
@@ -516,7 +591,32 @@ def link_google_auth_method(args):
 def link_facebook_auth_method(args):
     if 'token' not in args:
         return jsonify({'error_message': 'Facebook auth method must indicate token in credentials'}), 400
-    return jsonify({'error_message': 'Facebook login not yet implemented'}), 501
+    token = args['token']
+    # Get google email from token
+    try:
+        idinfo = requests.get(f'https://graph.facebook.com/me?fields=email&access_token={token}')
+        email = idinfo.json()['email']
+    except:
+        return jsonify({'error_message': 'Facebook token was invalid'}), 400
+
+    user_id = user_id_for_email(email)
+    # Check user exists
+    if user_id == None:
+        return jsonify({'error_message': 'User with this email does not exist, please register first'}), 400
+    
+    # Check user does not already have google auth enabled
+    facebook_auth = FacebookAuth.query.filter_by(id = user_id).first()
+    if (facebook_auth != None):
+        return jsonify({'error_message': 'Facebook auth method already linked to this account'}), 400
+    
+    # Add facebook auth method to user
+    facebook_auth = FacebookAuth(user_id, token)
+    try:
+        facebook_auth.save()
+    except:
+        return jsonify({'error_message': 'Something went wrong when adding auth method google to user'}), 500
+    
+    return generate_tokens(str(user_id)), 200
 
 
 ######################################### UTILITY FUNCTIONS #######################################
