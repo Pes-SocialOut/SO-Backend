@@ -88,8 +88,6 @@ class Event(db.Model):
             "max_participants": self.max_participants,
             "event_image_uri": self.event_image_uri
         }
-        return eventJSON
-
 
 #Define the like class model
 class Like(db.Model):
