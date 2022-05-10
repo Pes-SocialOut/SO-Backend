@@ -125,7 +125,7 @@ def get_event(id):
 
     try:
         event = Event.query.filter_by(id = user_id)
-        return event.toJSON()
+        return jsonify(event.toJSON()), 200
     except:
         return jsonify({"error_message": "El evento no existe"}), 400
 
@@ -149,7 +149,7 @@ def delete_event(id):
 def get_all_events():
     try:
         all_events = Event.get_all()
-        return jsonify([event.toJSON() for event in all_events])
+        return jsonify([event.toJSON() for event in all_events]), 200
     except Exception as e:
         return jsonify({"error_message": e}), 400
 
