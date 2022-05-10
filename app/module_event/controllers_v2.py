@@ -394,7 +394,7 @@ def get_user_joins():
         events = {}
         for ides in ides_join:
             events.add(Event.query.filter_by(id = ides).first())
-        return jsonify([event.toJSON() for event in events])
+        return jsonify([event.toJSON() for event in events]), 200
     except:
         return jsonify({"error_message": "The event doesn't exist"}), 400       
 
@@ -449,7 +449,7 @@ def get_top_ten_events():
         
         top_ten_with_info.append(event_to_add)
 
-    return jsonify([event.toJSON() for event in top_ten_with_info])
+    return jsonify([event.toJSON() for event in top_ten_with_info]), 200
 
 
 
@@ -469,7 +469,7 @@ def get_event(id):
 
     try:
         event = Event.query.filter_by(id = event_id)
-        return event.toJSON()
+        return jsonify(event.toJSON()), 200
     except:
         return jsonify({"error_message": "The event doesn't exist"}), 400
 
@@ -540,7 +540,7 @@ def delete_event(id):
 def get_all_events():
     try:
         all_events = Event.get_all()
-        return jsonify([event.toJSON() for event in all_events])
+        return jsonify([event.toJSON() for event in all_events]), 200
     except Exception as e:
         return jsonify({"error_message": e}), 400
 
@@ -658,7 +658,7 @@ def get_likes_by_user():
         events = {}
         for ides in ides_likes:
             events.add(Event.query.filter_by(id = ides).first())
-        return jsonify([event.toJSON() for event in events])
+        return jsonify([event.toJSON() for event in events]), 200
     except:
         return jsonify({"error_message": "The event doesn't exist"}), 400        
 
@@ -736,7 +736,7 @@ def filter_by():
         if events_filter is None:
                 return jsonify({"error_message": "Any event match with the filter"}), 400
         else:
-            return jsonify([event.toJSON() for event in events_filter])
+            return jsonify([event.toJSON() for event in events_filter]), 200
     except Exception as e:
         return jsonify({"error_message": e}), 400
 
@@ -750,7 +750,7 @@ def lastest_events():
     try:
         lasts_events = Event.query.all().order_by(events.date_creation.desc())
         lasts_events = lasts_events.limit(10)
-        return jsonify([event.toJSON() for event in lasts_events])
+        return jsonify([event.toJSON() for event in lasts_events]), 200
     except Exception as e:
         return jsonify({"error_message": e}), 400
 
