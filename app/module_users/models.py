@@ -1,3 +1,4 @@
+from email.policy import default
 from app import db
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
@@ -150,3 +151,64 @@ class FacebookAuth(db.Model):
     def save(self):
         db.session.add(self)
         db.session.commit()
+
+class Achievement(db.Model):
+    __tablename__ = 'achievements'
+
+    # Achievement id
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4())
+    # Description
+    description = db.Column(db.String, nullable=False)
+    # Number of stages to be completed
+    stages = db.Column(db.Integer, nullable=False, default=1)
+
+    # To CREATE an instance of a Achievement
+    def __init__(self, id, description, stages):
+        self.id = id
+        self.description = description
+        self.stages = stages
+
+    def __repr__(self):
+        return f'Achievement({self.id}, {self.description}, {self.stages})'
+
+    # To DELETE a row from the table
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+    
+    # To SAVE a row from the table
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
+class AchievementProgress(db.Model):
+    __tablename__ = 'achievement_progress'
+
+    # User id
+    user = db.Column(UUID(as_uuid=True), db.ForeignKey(User.id), primary_key=True, default=uuid.uuid4())
+    # Achievement id
+    achievement = db.Column(UUID(as_uuid=True), db.ForeignKey(Achievement.id), primary_key=True, default=uuid.uuid4())
+    # Progreso
+    progress = db.Column(db.Integer, nullable=False, default=0)
+    # Fecha completado
+    completed_at = db.Column(db.DateTime)
+
+    def __init__(self, user, achievement, progress, completed_at):
+        self.user = user
+        self.achievement = achievement
+        self.progress = progress
+        self.completed_at = completed_at
+
+    def __repr__(self):
+        return f'Achievement({self.id}, {self.achievement}, {self.progress}, {self.completed_at})'
+
+    # To DELETE a row from the table
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+    
+    # To SAVE a row from the table
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
