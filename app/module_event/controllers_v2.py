@@ -35,7 +35,7 @@ max_latitude_catalunya = 42.85
 # - 400: Un objeto JSON con un mensaje de error
 # - 201: Un objeto JSON con todos los parametros del evento creado (con la id incluida) 
 @module_event_v2.route('/', methods=['POST'])
-#@jwt_required(optional=False)
+@jwt_required(optional=False)
 def create_event():
     try:
         args = request.json
@@ -47,7 +47,7 @@ def create_event():
     response = check_atributes(args)
     if (response['error_message'] != "all good"):
         return jsonify(response), 400
-    
+
     date_started = datetime.strptime(args.get("date_started"), '%Y-%m-%d %H:%M:%S')
     date_end= datetime.strptime(args.get("date_end"), '%Y-%m-%d %H:%M:%S')
     longitud = float(args.get("longitud"))
@@ -55,6 +55,10 @@ def create_event():
     max_participants = int(args.get("max_participants"))
     user_creator = uuid.UUID(args.get("user_creator"))
 
+  # restricion: solo puedes crear eventos para tu usuario (mirando Bearer Token)
+    auth_id = get_jwt_identity()
+    if str(user_creator) != auth_id:
+        return jsonify({"error_message": "Un usuario no puede crear un evento por otra persona"}), 400   
 
     event = Event(event_uuid, args.get("name"), args.get("description"), date_started, date_end, user_creator, longitud, latitude, max_participants, args.get("event_image_uri"))
     
@@ -93,7 +97,7 @@ def modify_events_v2(id):
     try:
         event_id = uuid.UUID(id)
     except:
-        return jsonify({"error_message": "la id no es una UUID valida"}), 400
+        return jsonify({"error_message": f"la id no es una UUID valida"}), 400
 
     # Parametros JSON
     try:
@@ -102,10 +106,14 @@ def modify_events_v2(id):
         return jsonify({"error_message": "Mira el JSON body de la request, hay un atributo mal definido"}), 400 
 
     try:
-        event = Event.query.filter_by(id = event_id).first()
+        event = Event.query.get(event_id)
     except:
-        return jsonify({"error_message": "El evento no existe"}), 400
+        return jsonify({"error_message": f"El evento {event_id} ha dado un error al hacer query"}), 400
     
+    # Si el evento no existe
+    if event is None:
+        return jsonify({"error_message": f"El evento {event_id} no existe"}), 400
+
     # Comprobar atributos de JSON para ver si estan bien
     response = check_atributes(args)
     if (response['error_message'] != "all good"):
@@ -115,9 +123,10 @@ def modify_events_v2(id):
     if event.user_creator != uuid.UUID(args.get("user_creator")):
         return jsonify({"error_message": "solo el usuario creador puede modificar su evento"}), 400
 
-    # auth_id = get_jwt_identity()
-    # if event.user_creator != auth_id:
-    #     return jsonify({"error_message": "A user cannot update the events of others"}), 400       
+    # restricion: solo el usuario creador puede modificar su evento (mirando Bearer Token)
+    auth_id = get_jwt_identity()
+    if str(event.user_creator) != auth_id:
+        return jsonify({"error_message": "A user cannot update the events of others"}), 400       
 
     event.name = args.get("name")
     event.description = args.get("description")
@@ -142,11 +151,11 @@ def modify_events_v2(id):
 # Metodo para comprobar los atributos pasados de un evento a crear o modificat (POST o PUT)
 # Devuelve: Diccionario con un mensaje de error o un mensaje de todo bien 
 def check_atributes(args):
-    # restriccion 0: Mirar si los atributos estan en la URL
-    if args.get("name") is None:
-        return {"error_message": "atributo name no esta en la URL o es null"}
-    if args.get("description") is None:
-        return {"error_message": "atributo descripcion no esta en la URL o es null"}
+    # restriccion 0: Mirar si los atributos estan en el body
+    if args.get("name") is None or len(args.get("name")) == 0:
+        return {"error_message": "atributo name no esta en el body, es null o esta vacio"}
+    if args.get("description") is None or len(args.get("description")) == 0:
+        return {"error_message": "atributo description no esta en el body, es null o esta vacio"}
     if args.get("date_started") is None:
         return {"error_message": "atributo date_started no esta en la URL o es null"}
     if args.get("date_end") is None:
@@ -168,22 +177,22 @@ def check_atributes(args):
     try:
         user_creator = uuid.UUID(args.get("user_creator"))
     except ValueError:
-        return {"error_message": "user_creator isn't a valid UUID"}
+        return {"error_message": f"user_creator id isn't a valid UUID"}
     if not isinstance(args.get("name"), str):
         return {"error_message": "name isn't a string!"} 
     if not isinstance(args.get("description"), str):
         return {"error_message": "description isn't a string!"}
     if len(args.get("name")) == 0 | len(args.get("description")) == 0 | len(str(user_creator)) == 0:
-        return {"error_message": "An attribute is empty!"}
+        return {"error_message": "name, description or user_creator is empty!"}
     
     # restriccion 3: date started es mas grande que end date del evento (format -> 2015-06-05 10:20:10) y Comprobar Value Error
     try:
         date_started = datetime.strptime(args.get("date_started"), '%Y-%m-%d %H:%M:%S')
         date_end= datetime.strptime(args.get("date_end"), '%Y-%m-%d %H:%M:%S')
         if date_started > date_end:
-            return {"error_message": "date Started is bigger than date End, that's not possible!"}
+            return {"error_message": f"date Started {date_started} is bigger than date End {date_end}, that's not possible!"}
     except ValueError:
-        return {"error_message": "date_started or date_ended aren't real dates or they don't exist!"}
+        return {"error_message": f"date_started or date_ended aren't real dates or they don't exist!"}
     
     # restriccion 4: longitud y latitude en Catalunya y checkear Value Error
     try:
@@ -196,7 +205,7 @@ def check_atributes(args):
 
     # restriccion 5: date started deberia ser ahora mismo o en el futuro    
     if date_started < datetime.now():
-        return {"error_message": "date Started antes de ahora mismo, ha comenzado ya?"}
+        return {"error_message": f"date Started {date_started} es antes de ahora mismo, ha comenzado ya?"}
 
     # restriccion 6: atributo description es mas grande que 250 characters
     if len(args.get("description")) > 250:
@@ -212,10 +221,11 @@ def check_atributes(args):
     except ValueError:
         return {"error_message": "max participants no es un mumero"}
     if max_participants < 2:
-        return {"error_message": "el numero maximo de participantes ha de ser mas grande que 2"}
+        return {"error_message": f"el numero maximo de participantes ({max_participants}) ha de ser mas grande que 2"}
 
-    # restriccion 9: imagen del evento no es una URL valida
-    if not validators.url(args.get("event_image_uri")):
+    # restriccion 9: imagen del evento no es una URL valida (pero si no hay no pasa nada)
+    if len(args.get("event_image_uri")) != 0:
+        if not validators.url(args.get("event_image_uri")):
             return {"error_message": "la imagen del evento no es una URL valida"} 
         
     # TODO restriccion 10: mirar si la imagen es una imagen vulgar
@@ -465,13 +475,13 @@ def get_event(id):
     try:
         event_id = uuid.UUID(id)
     except:
-        return jsonify({"error_message": "Event_id isn't a valid UUID"}), 400
+        return jsonify({"error_message": f"The event id isn't a valid UUID"}), 400
 
     try:
-        event = Event.query.filter_by(id = event_id)
+        event = Event.query.get(event_id)
         return jsonify(event.toJSON()), 200
     except:
-        return jsonify({"error_message": "The event doesn't exist"}), 400
+        return jsonify({"error_message": f"The event {event_id} doesn't exist"}), 400
 
 # GET/user_creator method: devuelve todos los eventos creados por un usuario
 @module_event_v2.route('/creator', methods=['GET'])
