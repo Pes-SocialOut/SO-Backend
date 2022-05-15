@@ -7,7 +7,7 @@ import uuid
 from app import db
 
 # Import module models
-from app.module_users.models import User, Achievement, AchievementProgress, Friend, FriendInvite
+from app.module_users.models import User, Achievement, AchievementProgress, Friend, FriendInvite, UserLanguage
 
 # Define the blueprint: 'users', set its url prefix: app.url/users
 module_users_v2 = Blueprint('users_v2', __name__, url_prefix='/v2/users')
@@ -33,6 +33,8 @@ def get_profile(id):
         profile['friends'] = [{'id': f.id, 'username': f.username} for f in friends]
     else:
         del profile['email']
-    # Add languages, when implemented
+    
+    user_languages = UserLanguage.query.filter_by(user = user_id).all()
+    profile['languages'] = [ str(l.language.value) for l in user_languages ]
     return jsonify(profile), 200
 

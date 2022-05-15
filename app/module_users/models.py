@@ -2,6 +2,7 @@ from email.policy import default
 from app import db
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
+import enum
 
 # Define a User model
 class User(db.Model):
@@ -267,6 +268,34 @@ class FriendInvite(db.Model):
 
     def __repr__(self):
         return f'FriendInvite({self.invitee}, {self.code}, {self.expires_at})'
+
+    # To DELETE a row from the table
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+    
+    # To SAVE a row from the table
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
+class lang(enum.Enum):
+    catalan = "catalan"
+    spanish = "spanish"
+    english = "english"
+
+class UserLanguage(db.Model):
+    __tablename__ = 'user_lang'
+
+    user = db.Column(UUID(as_uuid=True), db.ForeignKey(User.id), primary_key=True, default=uuid.uuid4())
+    language = db.Column(db.Enum(lang), primary_key=True)
+
+    def __init__(self, user, language):
+        self.user = user
+        self.language = language
+
+    def __repr__(self):
+        return f'UserLanguage({self.user}, {self.language})'
 
     # To DELETE a row from the table
     def delete(self):

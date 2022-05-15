@@ -238,7 +238,7 @@ def register_socialout():
     if pw_status != 200: return pw_msg, pw_status
 
     # Check verification code in codes sent to email
-    db_verification = EmailVerificationPendant.query.filter_by(EmailVerificationPendant.email == email, datetime.now(timezone.utc) < EmailVerificationPendant.expires_at).first()
+    db_verification = EmailVerificationPendant.query.filter(EmailVerificationPendant.email == email).filter(EmailVerificationPendant.expires_at > datetime.now(timezone.utc)).first()
     if db_verification == None:
         return jsonify({'error_message': 'Verification code was never sent to this email or the code has expired.'}), 400
     if db_verification.code != verification:
@@ -538,7 +538,7 @@ def link_socialout_auth_method(args):
     if pw_status != 200: return pw_msg, pw_status
 
     # Check verification code in codes sent to email
-    db_verification = EmailVerificationPendant.query.filter_by(EmailVerificationPendant.email == email, datetime.now(timezone.utc) < EmailVerificationPendant.expires_at).first()
+    db_verification = EmailVerificationPendant.query.filter(EmailVerificationPendant.email == email).filter(EmailVerificationPendant.expires_at > datetime.now(timezone.utc)).first()
     if db_verification == None:
         return jsonify({'error_message': 'Verification code was never sent to this email or the code has expired.'}), 400
     if db_verification.code != verification:
