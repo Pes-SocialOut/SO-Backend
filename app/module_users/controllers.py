@@ -246,7 +246,7 @@ def register_socialout():
 
     # Add user to bd
     user_id = uuid.uuid4()
-    user = User(user_id, username, email, None, None, description, hobbies)
+    user = User(user_id, username, email, description, hobbies)
     try:
         user.save()
     except:
@@ -301,7 +301,7 @@ def register_google():
 
     # Add user to bd
     user_id = uuid.uuid4()
-    user = User(user_id, username, email, None, None, description, hobbies)
+    user = User(user_id, username, email, description, hobbies)
     try:
         user.save()
     except:
@@ -350,7 +350,7 @@ def register_facebook():
 
     # Add user to bd
     user_id = uuid.uuid4()
-    user = User(user_id, username, email, None, None, description, hobbies)
+    user = User(user_id, username, email, description, hobbies)
     try:
         user.save()
     except:

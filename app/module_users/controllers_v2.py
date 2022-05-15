@@ -7,10 +7,10 @@ import uuid
 from app import db
 
 # Import module models
-from app.module_users.models import User, SocialOutAuth, GoogleAuth, FacebookAuth, EmailVerificationPendant
+from app.module_users.models import User
 
 # Define the blueprint: 'users', set its url prefix: app.url/users
-module_users_v2 = Blueprint('users', __name__, url_prefix='/v2/users')
+module_users_v2 = Blueprint('users_v2', __name__, url_prefix='/v2/users')
 
 
 ###################################### PROFILE / CREDENTIALS ######################################
