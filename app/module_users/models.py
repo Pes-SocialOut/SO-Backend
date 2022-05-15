@@ -12,27 +12,21 @@ class User(db.Model):
     username = db.Column(db.String, nullable=False)
     # Email
     email = db.Column(db.String, unique=True, nullable=False)
-    # URL of the full-resolution profile image
-    profile_img_uri = db.Column(db.String)
-    # URL of the reduced-resolution profile image
-    mini_profile_img_uri = db.Column(db.String)
     # User description / information
     description = db.Column(db.String, default="", nullable=False)
     # User hobbies
     hobbies = db.Column(db.String, default="", nullable=False)
 
     # To CREATE an instance of a User
-    def __init__(self, id, username, email, profile_img_uri, mini_profile_img_uri, description, hobbies):
+    def __init__(self, id, username, email, description, hobbies):
         self.id = id
         self.username = username
         self.email = email
-        self.profile_img_uri = profile_img_uri
-        self.mini_profile_img_uri = mini_profile_img_uri
         self.description = description
         self.hobbies = hobbies
 
     def __repr__(self):
-        return f'User({self.id}, {self.username}, {self.profile_img_uri}, {self.mini_profile_img_uri}, {self.description}, {self.hobbies})'
+        return f'User({self.id}, {self.username}, {self.description}, {self.hobbies})'
 
     # To DELETE a row from the table
     def delete(self):
@@ -49,8 +43,6 @@ class User(db.Model):
             'id': self.id,
             'username': self.username,
             'email': self.email,
-            'profile_img_uri': self.profile_img_uri,
-            'mini_profile_img_uri': self.mini_profile_img_uri,
             'description': self.description,
             'hobbies': self.hobbies
         }

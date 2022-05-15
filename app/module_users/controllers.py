@@ -42,11 +42,12 @@ def get_profile(id):
     if query_result == None:
             return jsonify({'error_message':f'User with id {id} does not exist'}), 404
     profile = query_result.toJSON()
+    profile['profile_img_uri'] = ''
+    profile['mini_profile_img_uri'] = ''
     if is_authenticated_id:
-        profile['friends'] = [] # TODO: add friends
+        profile['friends'] = []
     else:
         del profile['email']
-    # Add languages, when implemented
     return jsonify(profile), 200
 
 @module_users_v1.route('/<id>', methods=['PUT'])
