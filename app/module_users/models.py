@@ -82,13 +82,15 @@ class EmailVerificationPendant(db.Model):
 
     email = db.Column(db.String, primary_key=True, nullable=False)
     code = db.Column(db.String, nullable=False)
+    expires_at = db.Column(db.DateTime)
 
-    def __init__(self, email, code):
+    def __init__(self, email, code, expires_at):
         self.email = email
         self.code = code
+        self.expires_at = expires_at
 
     def __repr__(self):
-        return f'User({self.email}, {self.code})'
+        return f'User({self.email}, {self.code}, {self.expires_at})'
 
     # To DELETE a row from the table
     def delete(self):
@@ -212,3 +214,66 @@ class AchievementProgress(db.Model):
         db.session.add(self)
         db.session.commit()
 
+
+class Friend(db.Model):
+    __tablename__ = 'friends'
+    __table_args__ = (
+        db.CheckConstraint('invitee <> invited'),
+    )
+
+    # Invitee id
+    invitee = db.Column(UUID(as_uuid=True), db.ForeignKey(User.id), primary_key=True, default=uuid.uuid4())
+    # Invited id
+    invited = db.Column(UUID(as_uuid=True), db.ForeignKey(User.id), primary_key=True, default=uuid.uuid4())
+
+    def __init__(self, invitee, invited):
+        self.invitee = invitee
+        self.invited = invited
+
+    def __repr__(self):
+        return f'Achievement({self.invitee}, {self.invited})'
+
+    # To DELETE a row from the table
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+    
+    # To SAVE a row from the table
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+    
+    @staticmethod
+    def getFriendsOfUserId(id):
+        return db.session.query(User) \
+            .join(Friend, Friend.invitee == User.id) \
+            .filter(Friend.invited == id) \
+            .union( db.session.query(User) \
+                .join(Friend, Friend.invited == User.id) \
+                .filter(Friend.invitee == id) \
+            ).all()
+
+class FriendInvite(db.Model):
+    __tablename__ = 'friend_invites'
+
+    invitee = db.Column(UUID(as_uuid=True), db.ForeignKey(User.id), primary_key=True, default=uuid.uuid4())
+    code = db.Column(db.Integer, nullable=False)
+    expires_at = db.Column(db.DateTime)
+
+    def __init__(self, invitee, code, expires_at):
+        self.invitee = invitee
+        self.code = code
+        self.expires_at = expires_at
+
+    def __repr__(self):
+        return f'FriendInvite({self.invitee}, {self.code}, {self.expires_at})'
+
+    # To DELETE a row from the table
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+    
+    # To SAVE a row from the table
+    def save(self):
+        db.session.add(self)
+        db.session.commit()

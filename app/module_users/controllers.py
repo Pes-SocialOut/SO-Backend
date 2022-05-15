@@ -238,9 +238,9 @@ def register_socialout():
     if pw_status != 200: return pw_msg, pw_status
 
     # Check verification code in codes sent to email
-    db_verification = EmailVerificationPendant.query.filter_by(email = email).first()
+    db_verification = EmailVerificationPendant.query.filter_by(EmailVerificationPendant.email == email, datetime.now(timezone.utc) < EmailVerificationPendant.expires_at).first()
     if db_verification == None:
-        return jsonify({'error_message': 'Verification code was never sent to this email.'}), 400
+        return jsonify({'error_message': 'Verification code was never sent to this email or the code has expired.'}), 400
     if db_verification.code != verification:
         return jsonify({'error_message': 'Verification code does not coincide with code sent to email'}), 400
 
@@ -538,9 +538,9 @@ def link_socialout_auth_method(args):
     if pw_status != 200: return pw_msg, pw_status
 
     # Check verification code in codes sent to email
-    db_verification = EmailVerificationPendant.query.filter_by(email = email).first()
+    db_verification = EmailVerificationPendant.query.filter_by(EmailVerificationPendant.email == email, datetime.now(timezone.utc) < EmailVerificationPendant.expires_at).first()
     if db_verification == None:
-        return jsonify({'error_message': 'Verification code was never sent to this email.'}), 400
+        return jsonify({'error_message': 'Verification code was never sent to this email or the code has expired.'}), 400
     if db_verification.code != verification:
         return jsonify({'error_message': 'Verification code does not coincide with code sent to email'}), 400
     
@@ -646,12 +646,13 @@ def send_verification_code_to(email):
     # Save code to database
     db_verification = EmailVerificationPendant.query.filter_by(email = email).first()
     if db_verification == None:
-        db_verification = EmailVerificationPendant(email, code)
+        db_verification = EmailVerificationPendant(email, code, datetime.now(timezone.utc)+timedelta(minutes=15))
         db_verification.save()
     else:
         db_verification.code = code
+        db_verification.expires_at = datetime.now(timezone.utc)+timedelta(minutes=15)
         db.session.commit()
-    send_email(email, 'SocialOut auth verification code', f'Your verification code for SocialOut authentication is {code}')
+    send_email(email, 'SocialOut auth verification code', f'Your verification code for SocialOut authentication is {code}. It expires in 15 minutes.')
 
 def send_email(email, subject, body):
     EMAIL_ADRESS = os.getenv('MAIL_USERNAME')

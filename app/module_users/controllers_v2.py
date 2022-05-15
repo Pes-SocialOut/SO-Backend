@@ -7,7 +7,7 @@ import uuid
 from app import db
 
 # Import module models
-from app.module_users.models import User, Achievement, AchievementProgress
+from app.module_users.models import User, Achievement, AchievementProgress, Friend, FriendInvite
 
 # Define the blueprint: 'users', set its url prefix: app.url/users
 module_users_v2 = Blueprint('users_v2', __name__, url_prefix='/v2/users')
@@ -29,7 +29,8 @@ def get_profile(id):
             return jsonify({'error_message':f'User with id {id} does not exist'}), 404
     profile = query_result.toJSON()
     if is_authenticated_id:
-        profile['friends'] = [] # TODO: add friends
+        friends = Friend.getFriendsOfUserId(user_id)
+        profile['friends'] = [{'id': f.id, 'username': f.username} for f in friends]
     else:
         del profile['email']
     # Add languages, when implemented
