@@ -21,7 +21,7 @@ import smtplib
 from email.message import EmailMessage
 
 # Import module models
-from app.module_users.models import User, SocialOutAuth, GoogleAuth, FacebookAuth, EmailVerificationPendant
+from app.module_users.models import User, SocialOutAuth, GoogleAuth, FacebookAuth, EmailVerificationPendant, Friend, UserLanguage
 
 # Define the blueprint: 'users', set its url prefix: app.url/users
 module_users_v1 = Blueprint('users', __name__, url_prefix='/v1/users')
@@ -71,6 +71,9 @@ def update_profile(id):
     languages = request.json['languages']
     hobbies = request.json['hobbies']
 
+    if len(languages) == 0 or any([l not in ['catalan', 'spanish', 'english'] for l in languages]):
+        return jsonify({'error_message': 'Languages must be as ubset of the following: {catalan, spanish, english}'}), 400
+
     user = User.query.filter_by(id = uuid.UUID(id)).first()
     if (user == None):
         return jsonify({'error_message': f'User does not exist for id {id}'}), 404
@@ -84,12 +87,28 @@ def update_profile(id):
     except:
         return jsonify({'error_message': f'An error occured when updating user {id}'}), 500
 
-    # TODO: Update languages, when implemented
+    user_languages = UserLanguage.query.filter_by(user = user.id).all()
+    for ul in user_languages:
+        if ul.language.value not in languages:
+            try:
+                ul.delete()
+            except:
+                return jsonify({'error_message': f'An error occured when updating language {l}'}), 500
+        else:
+            languages.remove(ul.language.value)
+    for l in languages:
+        try:
+            UserLanguage(user.id, l).save()
+        except:
+            return jsonify({'error_message': f'An error occured when updating language {l}'}), 500
 
     profile = user.toJSON()
-
-    # TODO: add friend list and languages
-    profile['friends'] = []
+    # Añadir amigos
+    friends = Friend.getFriendsOfUserId(user.id)
+    profile['friends'] = [{'id': f.id, 'username': f.username} for f in friends]
+    # Añadir idiomas
+    user_languages = UserLanguage.query.filter_by(user = user.id).all()
+    profile['languages'] = [ str(l.language.value) for l in user_languages ]
 
     return jsonify(profile), 200
 
@@ -228,11 +247,14 @@ def register_socialout():
     languages = request.json['languages']
     hobbies = request.json['hobbies']
     verification = request.json['verification']
+    
+    if len(languages) == 0 or any([l not in ['catalan', 'spanish', 'english'] for l in languages]):
+        return jsonify({'error_message': 'Languages must be as ubset of the following: {catalan, spanish, english}'}), 400
 
     # Check no other user exists with that email
     if user_id_for_email(email) != None:
         return jsonify({'error_message': 'User with this email already exists'}), 400
-    
+
     # Check password strength
     pw_msg, pw_status = verify_password_strength(pw)
     if pw_status != 200: return pw_msg, pw_status
@@ -250,9 +272,14 @@ def register_socialout():
     try:
         user.save()
     except:
-        return jsonify({'error_message': 'Something went wrong when creating new user in db'}), 500
+        return jsonify({'error_message': 'Something went wrong when creating new user in db.'}), 500
     
-    # Add languages to user (once implemented)
+    # Add languages to user
+    for l in languages:
+        try:
+            UserLanguage(user_id, l).save()
+        except:
+            return jsonify({'error_message': f'An error occured when adding language {l} to new user.'}), 500
     
     # Add socialout auth method to user
     user_salt = get_random_salt(15)
@@ -261,7 +288,7 @@ def register_socialout():
     try:
         socialout_auth.save()
     except:
-        return jsonify({'error_message': 'Something went wrong when adding auth method socialout to user'}), 500
+        return jsonify({'error_message': 'Something went wrong when adding auth method socialout to user.'}), 500
 
     # Remove verification code -> already used
     db_verification.delete()
@@ -286,6 +313,9 @@ def register_google():
     description = request.json['description']
     languages = request.json['languages']
     hobbies = request.json['hobbies']
+    
+    if len(languages) == 0 or any([l not in ['catalan', 'spanish', 'english'] for l in languages]):
+        return jsonify({'error_message': 'Languages must be as ubset of the following: {catalan, spanish, english}'}), 400
 
     # Get google email from token
     try:
@@ -307,7 +337,12 @@ def register_google():
     except:
         return jsonify({'error_message': 'Something went wrong when creating new user in db'}), 500
     
-    # Add languages to user (once implemented)
+    # Add languages to user 
+    for l in languages:
+        try:
+            UserLanguage(user_id, l).save()
+        except:
+            return jsonify({'error_message': f'An error occured when adding language {l} to new user.'}), 500
     
     # Add google auth method to user
     google_auth = GoogleAuth(user_id, token)
@@ -336,6 +371,9 @@ def register_facebook():
     description = request.json['description']
     languages = request.json['languages']
     hobbies = request.json['hobbies']
+    
+    if len(languages) == 0 or any([l not in ['catalan', 'spanish', 'english'] for l in languages]):
+        return jsonify({'error_message': 'Languages must be as ubset of the following: {catalan, spanish, english}'}), 400
 
     # Get email from facebook token
     try:
@@ -356,7 +394,12 @@ def register_facebook():
     except:
         return jsonify({'error_message': 'Something went wrong when creating new user in db'}), 500
     
-    # Add languages to user (once implemented)
+    # Add languages to user
+    for l in languages:
+        try:
+            UserLanguage(user_id, l).save()
+        except:
+            return jsonify({'error_message': f'An error occured when adding language {l} to new user.'}), 500
     
     # Add facebook auth method to user
     facebook_auth = FacebookAuth(user_id, token)
