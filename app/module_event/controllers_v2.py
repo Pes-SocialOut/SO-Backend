@@ -282,8 +282,11 @@ def join_event(id):
         return jsonify({"error_message": "la id del evento no es una UUID valida"}), 400
 
     try:
-        event = Event.query.filter_by(id = event_id).first()
+        event = Event.query.get(event_id)
     except:
+        return jsonify({"error_message":f"Error al hacer query de un evento"}), 400
+    
+    if event is None:
         return jsonify({"error_message":f"El evento {event_id} no existe en la BD"}), 400
     
     # TODO Mirar si el user puede unirse al evento (tema banear)
@@ -296,16 +299,25 @@ def join_event(id):
     try:
         user_id = uuid.UUID(args.get("user_id"))
     except:
-        return jsonify({"error_message":f"la user_id {user_id} no es una UUID valida"}), 400
+        return jsonify({"error_message":f"la user_id no es una UUID valida"}), 400
 
     auth_id = get_jwt_identity()
-    if args.get("user_id") != auth_id:
+    if str(user_id) != auth_id:
         return jsonify({"error_message": "A user cannot join a event for others"}), 400   
                 
     # restriccion: el usuario creador no se puede unir a su propio evento (ya se une automaticamente al crear el evento)
     if event.user_creator == user_id:
-        return jsonify({"error_message":
-                f"El usuario {user_id} es el creador del evento (ya esta dentro)"}), 400
+        return jsonify({"error_message": f"El usuario {user_id} es el creador del evento (ya esta dentro)"}), 400
+
+    # restriccion: el usuario ya esta dentro del evento
+    particip = Participant.query.filter_by(event_id=event_id, user_id=user_id).first()
+    if particip is not None:
+        return jsonify({"error_message": f"El usuario {user_id} ya esta dentro del evento {event_id}"}), 400
+
+    # restriccion: el evento ya esta lleno
+    num_participants = Participant.query.filter_by(event_id=event_id).all()
+    if len(num_participants) >= event.max_participants:
+        return jsonify({"error_message": f"El evento {event_id} ya esta lleno!"}), 400
 
     participant = Participant(event_id, user_id)
     
@@ -336,10 +348,13 @@ def leave_event(id):
         return jsonify({"error_message": "la id del evento no es una UUID valida"}), 400
 
     try:
-        event = Event.query.filter_by(id = event_id).first()
+        event = Event.query.get(event_id)
     except:
+        return jsonify({"error_message":f"Error al hacer query de un evento"}), 400
+    
+    if event is None:
         return jsonify({"error_message":f"El evento {event_id} no existe en la BD"}), 400
-        
+    
     try:
         args = request.json
     except:
@@ -348,18 +363,18 @@ def leave_event(id):
     try:
         user_id = uuid.UUID(args.get("user_id"))
     except:
-        return jsonify({"error_message":f"la user_id {user_id} no es una UUID valida"}), 400
+        return jsonify({"error_message":f"la user_id no es una UUID valida"}), 400
 
-
+    # restriccion: Un usuario no puede abandonar un evento por otro
     auth_id = get_jwt_identity()
-    if args.get("user_id") != auth_id:
+    if str(user_id) != auth_id:
         return jsonify({"error_message": "A user cannot leave a event for others"}), 400   
 
     # restriccion: el usuario no es participante del evento
     try:
         participant = Participant.query.filter_by(event_id = event_id, user_id = user_id).first()
     except:
-        return jsonify({"error_message":f"El usuario {user_id} no es participante del evento {event_id}"}), 400
+        return jsonify({"error_message":f"Error en el query de participante"}), 400
     
     if participant is None:
         return jsonify({"error_message":f"El usuario {user_id} no es participante del evento {event_id}"}), 400
@@ -379,37 +394,34 @@ def leave_event(id):
 
     return jsonify({"message":f"el participante {user_id} ha abandonado CON EXITO"}), 200
 
-# GET method: todos los eventos a los que un usuario se ha unido
-@module_event_v2.route('/join', methods=['GET'])
+# PARTICIPACIONES DE UN USER: todos los eventos a los que un usuario se ha unido
+@module_event_v2.route('/joined/<id>', methods=['GET'])
 # RECIBE:
 # - GET HTTP request con la id del usuario que queremos solicitar
 # DEVUELVE:
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
 # - 200: Un objeto JSON con los eventos a los que se a unido
 @jwt_required(optional=False)
-def get_user_joins():
-
+def get_user_joins(id):
     try:
-        args = request.json
+        user_id = uuid.UUID(id)
     except:
-        return jsonify({"error_message": "The JSON body from the request is poorly defined"}), 400 
+        return jsonify({"error_message": f"The user id isn't a valid UUID"}), 400
 
     try:
-        user_id = args.get("user_id")
+        events_joined = Participant.query.filter_by(user_id = user_id)
     except:
-        return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
-
+            return jsonify({"error_message": "Error when querying participants"}), 400       
     try:
-        ides_join = Participant.query.filter_by(user_id = user_id)
-        events = {}
-        for ides in ides_join:
-            events.add(Event.query.filter_by(id = ides).first())
+        events = []
+        for ides in events_joined:
+            events.append(Event.query.get(ides.event_id))
         return jsonify([event.toJSON() for event in events]), 200
     except:
-        return jsonify({"error_message": "The event doesn't exist"}), 400       
+        return jsonify({"error_message": "Unexpected error"}), 400       
 
     
-# GET method: los 10 eventos con el mayor numero de likes
+# DIEZ EVENTOS CON MAYOR NUMERO DE LIKES: los 10 eventos con el mayor numero de likes
 @module_event_v2.route('/topten', methods=['GET'])
 # DEVUELVE:
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
@@ -463,7 +475,7 @@ def get_top_ten_events():
 
 
 
-# GET method: returns the information of one event
+# OBTENER UN EVENTO: returns the information of one event
 @module_event_v2.route('/<id>', methods=['GET'])
 # RECIBE:
 # - GET HTTP request con la id del evento del que se quieren TODOS obtener los parametros
@@ -483,7 +495,7 @@ def get_event(id):
     except:
         return jsonify({"error_message": f"The event {event_id} doesn't exist"}), 400
 
-# GET/user_creator method: devuelve todos los eventos creados por un usuario
+# OBTENER EVENTOS PUR USUARIO CREADOR method: devuelve todos los eventos creados por un usuario
 @module_event_v2.route('/creator', methods=['GET'])
 # RECIBE:
 # - GET HTTP request con la id del usuario del que se quieren obtener los eventos creados.
@@ -509,7 +521,7 @@ def get_creations():
         return jsonify({"error_message": "An error has ocurred"}), 400        
 
 
-# DELETE method: deletes an event from the database
+# DELETE EVENTO method: deletes an event from the database
 @module_event_v2.route('/<id>', methods=['DELETE'])
 # RECIBE:
 # - DELETE HTTP request con la id del evento que se quiere eliminar
@@ -519,27 +531,56 @@ def get_creations():
 @jwt_required(optional=False)
 def delete_event(id):
     try:
-        user_id = uuid.UUID(id)
-    except :
-        return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
+        event_id = uuid.UUID(id)
+    except:
+        return jsonify({"error_message": "Event_id isn't a valid UUID"}), 400
 
     try:
-        eventb = Event.query.filter_by(id = user_id)
-    except :
-        return jsonify({"error_message": "The event doesn't exist"}), 400
+        event = Event.query.get(event_id)
+    except:
+        return jsonify({"error_message": f"Error getting the event"}), 400
 
-    auth_id = uuid.UUID(get_jwt_identity())
-    if eventb.user_creator != auth_id:
+    if event is None:
+        return jsonify({"error_message": f"The event {event_id} doesn't exist"}), 400
+
+    # restricion: solo el usuario creador puede eliminar su evento (mirando Bearer Token)
+    auth_id = get_jwt_identity()
+    if str(event.user_creator) != auth_id:
         return jsonify({"error_message": "A user cannot delete events if they are not the creator"}), 400          
 
+    # Eliminar todos los participantes del evento ANTES DE ELIMINAR EL EVENTO
     try:
-        eventb.delete()
-        return jsonify({"message": "Successful DELETE"}), 202
-    except Exception as e:
-        return jsonify({"error_message": e}), 400
+        participants = Participant.query.filter_by(event_id=event_id).all()
+    except:
+        return jsonify({"error_message": "error while querying participants of an event"}), 400
+
+    for p in participants:
+        try:
+            p.delete()
+        except:
+            return jsonify({"error_message": "error while deleting participants of an event"}), 400
+
+    # Eliminar todos los likes del evento ANTES DE ELIMINAR EL EVENTO
+    try:
+        likes = Like.query.filter_by(event_id=event_id).all()
+    except:
+        return jsonify({"error_message": "error while querying likes of an event"}), 400
+
+    for l in likes:
+        try:
+            l.delete()
+        except:
+            return jsonify({"error_message": "error while deleting likes of an event"}), 400
+
+    try:
+        event.delete()
+        return jsonify({"error_message": "Successful DELETE"}), 202
+    except:
+        return jsonify({"error_message": "error while deleting"}), 400
+    
 
 
-# GET ALL method: returns the information of all the events of the database
+# GET ALL EVENTOS method: retorna toda la informacion de todos los eventos de la database
 @module_event_v2.route('/', methods=['GET'])
 # RECIBE:
 # - GET HTTP request
@@ -550,9 +591,14 @@ def delete_event(id):
 def get_all_events():
     try:
         all_events = Event.get_all()
+    except:
+        return jsonify({"error_message": "Error when querying events"}), 400
+    
+    try:
         return jsonify([event.toJSON() for event in all_events]), 200
-    except Exception as e:
-        return jsonify({"error_message": e}), 400
+    except:
+        return jsonify({"error_message": "Unexpected error when passing events to JSON format"}), 400
+    
 
 
 # If the event doesn't exist
@@ -567,8 +613,7 @@ def teardown_request(exception):
     db.session.remove()
 
 
-#Dar like: un usuario le da like a un evento
-#POST method: crea un Like en la base de
+#DAR LIKE method: un usuario le da like a un evento
 @module_event_v2.route('<id>/like', methods=['POST'])
 #RECIBE:
 #- POST HTTP request con los parametros en un JSON object en el body de la request.
@@ -586,8 +631,8 @@ def create_like(id):
     except:
         return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
 
-    auth_id = uuid.UUID(get_jwt_identity())
-    if user_id != auth_id:
+    auth_id = get_jwt_identity()
+    if str(user_id) != auth_id:
         return jsonify({"error_message": "A user can't like for others"}), 400    
 
     try:
@@ -607,7 +652,7 @@ def create_like(id):
     LikeJSON = Nuevo_like.toJSON()
     return jsonify(LikeJSON), 201
 
-# DELETE method: deletes a like from the database
+# QUITAR LIKE method: deletes a like from the database
 @module_event_v2.route('/<id>/like', methods=['DELETE'])
 # RECIBE:
 # - DELETE HTTP request con la id del evento que se quiere eliminar
@@ -616,7 +661,6 @@ def create_like(id):
 # - 200: Un objeto JSON confirmando que se ha eliminado correctamente
 @jwt_required(optional=False)
 def delete_like(id):
-
     try:
         args = request.json
     except:
@@ -627,8 +671,8 @@ def delete_like(id):
     except:
         return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
 
-    auth_id = uuid.UUID(get_jwt_identity())
-    if delete_user_id != auth_id:
+    auth_id = get_jwt_identity()
+    if str(delete_user_id) != auth_id:
         return jsonify({"error_message": "A user can't remove likes for others"}), 400    
 
     try:
@@ -636,14 +680,19 @@ def delete_like(id):
     except:
         return jsonify({"error_message": "Event_id isn't a valid UUID"}), 400
 
+    
+    event = Event.query.get(delete_event_id)
+    if event is None:
+        return jsonify({"error_message": f"The event {str(delete_event_id)} doesn't exist"}), 400
+
     try:
         Like_borrar = Like.query.filter_by(user_id = delete_user_id, event_id = delete_event_id).first()
         Like_borrar.delete()
         return jsonify({"message": "Successful DELETE"}), 200
-    except :
-        return jsonify({"error_message": "The event doesn't exist"}), 400
+    except:
+        return jsonify({"error_message": f"The like of user {delete_user_id} in event {delete_event_id} doesn't exist"}), 400
 
-# GET method: todos los eventos a los que un usuario ha dado like
+# LIKES DE USER: todos los eventos a los que un usuario ha dado like
 @module_event_v2.route('/like', methods=['GET'])
 # RECIBE:
 # - GET HTTP request con la id del usuario que queremos solicitar
@@ -672,7 +721,7 @@ def get_likes_by_user():
     except:
         return jsonify({"error_message": "The event doesn't exist"}), 400        
 
-# GET method: saber si un usuario ha dado like a un evento
+# SABER SI USUARIO HA DADO LIKE A UN EVENTO method: saber si un usuario ha dado like a un evento
 @module_event_v2.route('/<id>/like', methods=['GET'])
 # RECIBE:
 # - GET HTTP request con la id del usuario que queremos consultar
