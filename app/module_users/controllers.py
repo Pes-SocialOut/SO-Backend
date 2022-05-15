@@ -93,14 +93,14 @@ def update_profile(id):
             try:
                 ul.delete()
             except:
-                return jsonify({'error_message': f'An error occured when updating language {l}'}), 500
+                return jsonify({'error_message': f'An error occured when updating previous language {ul.language.value}'}), 500
         else:
             languages.remove(ul.language.value)
     for l in languages:
         try:
             UserLanguage(user.id, l).save()
         except:
-            return jsonify({'error_message': f'An error occured when updating language {l}'}), 500
+            return jsonify({'error_message': f'An error occured when updating new language {l}'}), 500
 
     profile = user.toJSON()
     # Añadir amigos
