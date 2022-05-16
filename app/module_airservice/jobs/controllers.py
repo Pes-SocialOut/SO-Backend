@@ -25,7 +25,10 @@ def extract_data_from_api_job():
         return 'Auth failed', 403
     
     ini_time = datetime.now()
-    data_extraction(os.getenv("SQLALCHEMY_DATABASE_URI"))
+    try:
+        data_extraction(os.getenv("SQLALCHEMY_DATABASE_URI"))
+    except Exception as e:
+        return str(e), 400
     delta = datetime.now() - ini_time
 
     return f'Data extracted in {delta.seconds} seconds\n', 200
@@ -39,7 +42,10 @@ def calculate_triangulation_job():
         return 'Auth failed', 403
     
     ini_time = datetime.now()
-    triangulation(os.getenv("SQLALCHEMY_DATABASE_URI"))
+    try:
+        triangulation(os.getenv("SQLALCHEMY_DATABASE_URI"))
+    except Exception as e:
+        return str(e), 400
     delta = datetime.now() - ini_time
 
     return f'Triangulation calulated in {delta.seconds} seconds\n', 200

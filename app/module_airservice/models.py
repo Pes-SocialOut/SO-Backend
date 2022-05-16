@@ -57,8 +57,8 @@ class air_quality_station(db.Model):
         return {
             'eoi_code': self.eoi_code,
             'name': self.name,
-            'station_type': self.station_type.value,
-            'urban_area': self.urban_area.value,
+            'station_type': self.station_type.value if self.station_type != None else None,
+            'urban_area': self.urban_area.value if self.urban_area != None else None,
             'altitude': self.altitude,
             'longitude': self.longitude,
             'latitude': self.latitude,
