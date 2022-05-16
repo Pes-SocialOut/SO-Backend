@@ -1,10 +1,8 @@
 # Import flask dependencies
 # Import module models (i.e. User)
-from asyncio import events
-from unicodedata import name
-import weakref
 import sqlalchemy
 from app.module_event.models import Event, Participant, Like
+from app.module_users.models import User
 from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity, jwt_required
 from datetime import datetime
 from flask import (Blueprint, request, jsonify)
@@ -420,59 +418,6 @@ def get_user_joins(id):
     except:
         return jsonify({"error_message": "Unexpected error"}), 400       
 
-    
-# DIEZ EVENTOS CON MAYOR NUMERO DE LIKES: los 10 eventos con el mayor numero de likes
-@module_event_v2.route('/topten', methods=['GET'])
-# DEVUELVE:
-# - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
-# - 200: Un objeto JSON con los top 10 eventos con mas likes
-@jwt_required(optional=False)
-def get_top_ten_events():
-    # Coger todos los likes de la DB
-    try:
-        all_likes = Like.get_all()
-    except:
-        return jsonify({"error_message": "error getting likes"}), 400    
-    
-    # Guardar todos los likes de cada evento en un array Y FUNCIONA
-    try:
-        likes_in_events = {}
-        for like in all_likes:
-            s = str(like.event_id)
-            if s in likes_in_events:
-                likes_in_events[s] = likes_in_events[s] + 1
-            else:
-                likes_in_events[s] = 1
-    except:
-        return jsonify({"error_message": "error asignando vector likes"}), 400
-
-    # Guardar los top 10 eventos con mas likes en un array
-    i = 1
-    top_ten = []
-    while i <= 10:
-        most_likes = 0
-        most_liked_event = None
-        for event in likes_in_events:
-            if likes_in_events[event] >= most_likes:
-                most_liked_event = event
-                most_likes = likes_in_events[event]
-        if most_liked_event != None:
-            top_ten.append(most_liked_event)
-            likes_in_events.pop(most_liked_event)
-        i += 1
-    
-    # Coger la info de cada evento
-    top_ten_with_info = []
-    for event in top_ten:
-        try:
-            event_to_add = Event.query.filter_by(id=event).first()
-        except:
-            return jsonify({"error_message": "error en coger el top ten"}), 400
-        
-        top_ten_with_info.append(event_to_add)
-
-    return jsonify([event.toJSON() for event in top_ten_with_info]), 200
-
 
 
 # OBTENER UN EVENTO: returns the information of one event
@@ -498,27 +443,33 @@ def get_event(id):
 # OBTENER EVENTOS PUR USUARIO CREADOR method: devuelve todos los eventos creados por un usuario
 @module_event_v2.route('/creator', methods=['GET'])
 # RECIBE:
-# - GET HTTP request con la id del usuario del que se quieren obtener los eventos creados.
+# - GET HTTP request con la id del usuario del que se quieren obtener los eventos creados como query parameter.
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida
 # - 201: Un objeto JSON con TODOS los parametros del evento con la id de la request
 @jwt_required(optional=False)
 def get_creations():
+    try:
+        args = request.args
+    except:
+        return jsonify({"error_message": "Error loading args"}), 400
 
     try:
-        args = request.json
+        if args.get("userid") is None:
+            return jsonify({"error_message": "the id of the user isn't in the URL as a query parameter with name userid :("}), 400
+        else:
+            user_id = uuid.UUID(args.get("userid")) 
     except:
-        return jsonify({"error_message": "Mira el JSON body de la request, hay un atributo mal definido"}), 400 
+        return jsonify({"error_message": "userid isn't a valid UUID"}), 400
 
-    try:
-        user_id = uuid.UUID(args.get("user_id")) 
-    except:
-        return jsonify({"error_message": "Event_id isn't a valid UUID"}), 400
-
+    user = User.query.get(user_id)
+    if user is None:
+        return jsonify({"error_message": f"User {user_id} doesn't exist"}), 400
+    
     try:
         events_creats = Event.query.filter_by(user_creator = user_id)
         return jsonify([event.toJSON() for event in events_creats]), 201
     except:
-        return jsonify({"error_message": "An error has ocurred"}), 400        
+        return jsonify({"error_message": "An unexpected error ocurred"}), 400        
 
 
 # DELETE EVENTO method: deletes an event from the database
@@ -598,7 +549,78 @@ def get_all_events():
         return jsonify([event.toJSON() for event in all_events]), 200
     except:
         return jsonify({"error_message": "Unexpected error when passing events to JSON format"}), 400
+
+
+# FILTRAR EVENTO: Retorna un conjunto de eventos en base a unas caracteristicas
+# Recibe:
+# GET HTTP request con los atributos que quiere filtrar (formato JSON)
+#       {name, date_started, date_end}
+# Devuelve:
+@module_event_v2.route('/Filter', methods=['GET'])
+@jwt_required(optional=False)
+def filter_by():
+    try:
+        args = request.json
+    except:
+        return jsonify({"error_message": "The JSON body from the request is poorly defined"}), 400 
+
+    if args.get("name") is not None:
+        if len(args.get("name")) == 0:
+            return {"error_message": "EL nom es un string incorrecte"}    
+
+    if args.get("date_started") is not None or args.get("date_end") is not None:
+        try:
+            date_start_interval = datetime.strptime(args.get("date_started"), '%Y-%m-%d %H:%M:%S')
+            date_end_interval = datetime.strptime(args.get("date_end"), '%Y-%m-%d %H:%M:%S')
+            if date_start_interval > date_end_interval:
+                return {"error_message": "The start date must be greater than the end date"}
+            if date_start_interval == date_end_interval:
+                return {"error_message": "The start date and the end date are the same" }
+            if date_start_interval < datetime.now():
+                return {"error_message": "Date_started is before the now time"}
+        except ValueError:
+            return {"error_message": "date_started or date_ended aren't real dates or they don't exist!"}
+
+    try:
+        events_filter = None
+        if args.get("name") is not None:
+            events_filter = Event.filter_by(name = args.get["name"])
+
+        if args.get("date_started") is not None and args.get("name") is not None:
+            events_filter = events_filter.filter_by(Event.date_started >= date_start_interval, Event.date_started <= date_end_interval, Event.date_end <= date_end_interval, )
+        elif args.get("date_started") is not None:
+            events_filter = Event.filter_by(Event.date_started >= date_start_interval, Event.date_started <= date_end_interval, Event.date_end <= date_end_interval, )
+
+        if events_filter is None:
+                return jsonify({"error_message": "Any event match with the filter"}), 400
+        else:
+            return jsonify([event.toJSON() for event in events_filter]), 200
+    except Exception as e:
+        return jsonify({"error_message": e}), 400
+
+# OBTENER LOS 10 EVENTOS CREAS MAS RECIENTEMENTE method: Retorna un conjunto con los 10 eventos mas recientes
+@module_event_v2.route('/lastten', methods=['GET'])
+@jwt_required(optional=False)
+def lastest_events():
+    try:
+        lasts_events = Event.query.order_by(Event.date_creation.desc()).all()
+    except:
+        return {"error_message": "Error while querying events"}
     
+    lastten = []
+    i = 0
+    for e in lasts_events:
+        if i < 10:
+            lastten.append(e)
+            i += 1
+        else:
+            break
+    
+    return jsonify([event.toJSON() for event in lastten]), 200
+
+
+
+########################################################################### O T R O S ###########################################################################
 
 
 # If the event doesn't exist
@@ -613,8 +635,11 @@ def teardown_request(exception):
     db.session.remove()
 
 
+########################################################################### L I K E S ###########################################################################
+
+ 
 #DAR LIKE method: un usuario le da like a un evento
-@module_event_v2.route('<id>/like', methods=['POST'])
+@module_event_v2.route('/<id>/like', methods=['POST'])
 #RECIBE:
 #- POST HTTP request con los parametros en un JSON object en el body de la request.
 #DEVUELVE:
@@ -631,6 +656,7 @@ def create_like(id):
     except:
         return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
 
+    # Un usuario solo puede dar like por si mismo
     auth_id = get_jwt_identity()
     if str(user_id) != auth_id:
         return jsonify({"error_message": "A user can't like for others"}), 400    
@@ -639,7 +665,12 @@ def create_like(id):
         event_id = uuid.UUID(id)
     except:
         return jsonify({"error_message": "Event_id isn't a valid UUID"}), 400
-      
+
+    # Mirar si el evento existe
+    find_event = Event.query.get(event_id)
+    if find_event is None:
+        return jsonify({"error_message": f"The event {event_id} doesn't exist"}), 400
+
     Nuevo_like = Like(user_id, event_id)
     
     try:
@@ -692,126 +723,123 @@ def delete_like(id):
     except:
         return jsonify({"error_message": f"The like of user {delete_user_id} in event {delete_event_id} doesn't exist"}), 400
 
-# LIKES DE USER: todos los eventos a los que un usuario ha dado like
-@module_event_v2.route('/like', methods=['GET'])
+# LIKES DE UN USER: todos los eventos a los que un usuario ha dado like
+@module_event_v2.route('/like/<iduser>', methods=['GET'])
 # RECIBE:
 # - GET HTTP request con la id del usuario que queremos solicitar
 # DEVUELVE:
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
 # - 200: Un objeto JSON confirmando que se ha eliminado correctamente
 @jwt_required(optional=False)
-def get_likes_by_user():
-
+def get_likes_by_user(iduser):
     try:
-        args = request.json
-    except:
-        return jsonify({"error_message": "The JSON body from the request is poorly defined"}), 400 
-
-    try:
-        user_id = args.get("user_id")
+        user_id = uuid.UUID(iduser)
     except:
         return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
 
+    # TODO todos los usuarios pueden conseguir esta info?
+    # TODO si el user_id no existe, vacio o error de usuario no existe?
+
     try:
-        ides_likes = Like.query.filter_by(user_id = user_id)
-        events = {}
-        for ides in ides_likes:
-            events.add(Event.query.filter_by(id = ides).first())
+        likes_user = Like.query.filter_by(user_id = user_id)
+    except:
+            return jsonify({"error_message": "Error when querying likes"}), 400       
+    try:
+        events = []
+        for i in likes_user:
+            events.append(Event.query.get(i.event_id))
         return jsonify([event.toJSON() for event in events]), 200
     except:
-        return jsonify({"error_message": "The event doesn't exist"}), 400        
+        return jsonify({"error_message": "Unexpected error"}), 400       
 
 # SABER SI USUARIO HA DADO LIKE A UN EVENTO method: saber si un usuario ha dado like a un evento
-@module_event_v2.route('/<id>/like', methods=['GET'])
+@module_event_v2.route('/<iduser>/like/<idevento>', methods=['GET'])
 # RECIBE:
 # - GET HTTP request con la id del usuario que queremos consultar
 # DEVUELVE:
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
 # - 200: Un objeto JSON confirmando que se ha eliminado correctamente
 @jwt_required(optional=False)
-def get_likes_from_user():
-
+def get_likes_from_user(iduser, idevento):
     try:
-        args = request.json
-    except:
-        return jsonify({"error_message": "The JSON body from the request is poorly defined"}), 400  
-
-    try:
-        user_id_p = args.get("user_id")
+        user_id_q = uuid.UUID(iduser)
     except:
         return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
 
+    user = User.query.get(user_id_q)
+    if user is None:
+        return jsonify({"error_message": f"User {user_id_q} doesn't exist"}), 400    
     try:
-        event_id_p = uuid.UUID(id)
+        event_id_q = uuid.UUID(idevento)
     except:
         return jsonify({"error_message": "Event_id isn't a valid UUID"}), 400    
 
+    event = Event.query.get(event_id_q)
+    if event is None:
+        return jsonify({"error_message": f"Event {event_id_q} doesn't exist"}), 400   
+
     try:
-        Like.query.filter_by(user_id = user_id_p, event_id = event_id_p)
-        return jsonify({"message": "Le ha dado like"}), 200
+        liked = Like.query.filter_by(user_id = user_id_q, event_id = event_id_q).first()
     except:
+        return jsonify({"error_message": "Error while querying Like"}), 400
+    
+    if liked is None:
         return jsonify({"message": "No le ha dado like"}), 200    
+    else:
+        return jsonify({"message": "Le ha dado like"}), 200
 
-# FILTRAR EVENTO: Retorna un conjunto de eventos en base a unas caracteristicas
-# Recibe:
-# GET HTTP request con los atributos que quiere filtrar (formato JSON)
-#       {name, date_started, date_end}
-# Devuelve:
-@module_event_v2.route('/Filter', methods=['GET'])
+
+# DIEZ EVENTOS CON MAYOR NUMERO DE LIKES: los 10 eventos con el mayor numero de likes
+@module_event_v2.route('/topten', methods=['GET'])
+# DEVUELVE:
+# - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
+# - 200: Un objeto JSON con los top 10 eventos con mas likes
 @jwt_required(optional=False)
-def filter_by():
+def get_top_ten_events():
+    # Coger todos los likes de la DB
     try:
-        args = request.json
+        all_likes = Like.get_all()
     except:
-        return jsonify({"error_message": "The JSON body from the request is poorly defined"}), 400 
+        return jsonify({"error_message": "error getting likes"}), 400    
+    
+    # Guardar todos los likes de cada evento en un array Y FUNCIONA
+    try:
+        likes_in_events = {}
+        for like in all_likes:
+            s = str(like.event_id)
+            if s in likes_in_events:
+                likes_in_events[s] = likes_in_events[s] + 1
+            else:
+                likes_in_events[s] = 1
+    except:
+        return jsonify({"error_message": "error asignando vector likes"}), 400
 
-    if args.get("name") is not None:
-        if len(args.get("name")) == 0:
-            return {"error_message": "EL nom es un string incorrecte"}    
-
-    if args.get("date_started") is not None or args.get("date_end") is not None:
+    # Guardar los top 10 eventos con mas likes en un array
+    i = 1
+    top_ten = []
+    while i <= 10:
+        most_likes = 0
+        most_liked_event = None
+        for event in likes_in_events:
+            if likes_in_events[event] >= most_likes:
+                most_liked_event = event
+                most_likes = likes_in_events[event]
+        if most_liked_event != None:
+            top_ten.append(most_liked_event)
+            likes_in_events.pop(most_liked_event)
+        i += 1
+    
+    # Coger la info de cada evento
+    top_ten_with_info = []
+    for event in top_ten:
         try:
-            date_start_interval = datetime.strptime(args.get("date_started"), '%Y-%m-%d %H:%M:%S')
-            date_end_interval = datetime.strptime(args.get("date_end"), '%Y-%m-%d %H:%M:%S')
-            if date_start_interval > date_end_interval:
-                return {"error_message": "The start date must be greater than the end date"}
-            if date_start_interval == date_end_interval:
-                return {"error_message": "The start date and the end date are the same" }
-            if date_start_interval < datetime.now():
-                return {"error_message": "Date_started is before the now time"}
-        except ValueError:
-            return {"error_message": "date_started or date_ended aren't real dates or they don't exist!"}
+            event_to_add = Event.query.filter_by(id=event).first()
+        except:
+            return jsonify({"error_message": "error en coger el top ten"}), 400
+        
+        top_ten_with_info.append(event_to_add)
 
-    try:
-        events_filter = None
-        if args.get("name") is not None:
-            events_filter = Event.filter_by(name = args.get["name"])
-
-        if args.get("date_started") is not None and args.get("name") is not None:
-            events_filter = events_filter.filter_by(Event.date_started >= date_start_interval, Event.date_started <= date_end_interval, Event.date_end <= date_end_interval, )
-        elif args.get("date_started") is not None:
-            events_filter = Event.filter_by(Event.date_started >= date_start_interval, Event.date_started <= date_end_interval, Event.date_end <= date_end_interval, )
-
-        if events_filter is None:
-                return jsonify({"error_message": "Any event match with the filter"}), 400
-        else:
-            return jsonify([event.toJSON() for event in events_filter]), 200
-    except Exception as e:
-        return jsonify({"error_message": e}), 400
-
-# Ultimos EVENTO: Retorna un conjunto con los 10 eventos mas recientes
-# Recibe:
-# GET HTTP
-# Devuelve:
-@module_event_v2.route('/Lasts', methods=['GET'])
-@jwt_required(optional=False)
-def lastest_events():
-    try:
-        lasts_events = Event.query.all().order_by(events.date_creation.desc())
-        lasts_events = lasts_events.limit(10)
-        return jsonify([event.toJSON() for event in lasts_events]), 200
-    except Exception as e:
-        return jsonify({"error_message": e}), 400
+    return jsonify([event.toJSON() for event in top_ten_with_info]), 200
 
 
      
