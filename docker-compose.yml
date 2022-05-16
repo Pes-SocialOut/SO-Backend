@@ -1,7 +1,7 @@
 version: "3.8"
 services:
   db:
-    image: postgres:9.4
+    image: postgres:14.2
     container_name: social_out_db
     ports:
       - ${POSTGRES_PORT}:${POSTGRES_PORT}
