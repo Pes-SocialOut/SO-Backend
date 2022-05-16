@@ -33,6 +33,9 @@ def fetch_air_data(engine) -> list:
             GROUP BY aqs.eoi_code, aqs.longitude, aqs.latitude;',
             (qstring)
         ).fetchall()
+    
+    if len(air_data) == 0:
+        raise Exception('No data found from exactly one day ago... Aborting triangulation, mantaining previous one.')
 
     return air_data
 
