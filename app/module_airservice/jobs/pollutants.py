@@ -1,8 +1,6 @@
 import os
 from sqlalchemy import create_engine
 
-engine = create_engine(os.getenv("SQLALCHEMY_DATABASE_URI"))
-
 #Cada clave es el ID del contaminante
 #Sus valores [valor maxumo, peso]
 contaminantes = {
@@ -26,7 +24,7 @@ contaminantes = {
 }
 
 
-def insert_pollutant_data(contaminantes: dict) -> None:
+def insert_pollutant_data(contaminantes: dict, engine) -> None:
     for key in contaminantes:
         compos = key
         lower = 0.0
@@ -40,5 +38,6 @@ def insert_pollutant_data(contaminantes: dict) -> None:
             )
 
 if __name__ == '__main__':
-    insert_pollutant_data(contaminantes)
+    engine = create_engine(os.getenv("SQLALCHEMY_DATABASE_URI"))
+    insert_pollutant_data(contaminantes, engine)
 
