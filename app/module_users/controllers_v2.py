@@ -11,7 +11,10 @@ from app.utils.email import send_email
 from app.module_users.utils import user_id_for_email, authentication_methods_for_user_id, send_verification_code_to, generate_tokens, get_random_salt, verify_password_strength
 
 # Import module models
-from app.module_users.models import User, Achievement, AchievementProgress, Friend, UserLanguage, EmailVerificationPendant
+from app.module_users.models import User, Achievement, AchievementProgress, Friend, UserLanguage, EmailVerificationPendant, SocialOutAuth
+
+# Import the hashing object from the main app module
+from app import hashing
 
 from datetime import datetime, timedelta, timezone
 
@@ -76,3 +79,49 @@ def send_password_reset_code():
 
     return jsonify({'action': 'continue'}), 200
 
+@module_users_v2.route('/forgot_pw', methods=['POST'])
+def reset_forgotten_password():
+    if not request.json:
+        return jsonify({'error_message': 'Missing json object'}), 400 
+    if 'email' not in request.json:
+        return jsonify({'error_message': 'Email attribute missing in json'}), 400 
+    if 'password' not in request.json:
+        return jsonify({'error_message': 'Password attribute missing in json'}), 400 
+    if 'verification' not in request.json:
+        return jsonify({'error_message': 'Verification code attribute missing in json'}), 400 
+
+    email = request.json['email']
+    pw = request.json['password']
+    verification = request.json['verification']
+    user_id = user_id_for_email(email)
+
+    if user_id == None:
+        return jsonify({'error_message': 'No user found for this email'}), 404
+
+     # Check password strength
+    pw_msg, pw_status = verify_password_strength(pw)
+    if pw_status != 200: return pw_msg, pw_status
+
+    # Check verification code in codes sent to email
+    db_verification = EmailVerificationPendant.query.filter(EmailVerificationPendant.email == email).filter(EmailVerificationPendant.expires_at > datetime.now(timezone.utc)).first()
+    if db_verification == None:
+        return jsonify({'error_message': 'Verification code was never sent to this email or the code has expired.'}), 403
+    if db_verification.code != verification:
+        return jsonify({'error_message': 'Verification code does not coincide with code sent to email'}), 403
+    
+    socialout_auth = SocialOutAuth.query.filter(SocialOutAuth.id == user_id).first()
+
+    # Update socialout auth method to user
+    user_salt = get_random_salt(15)
+    hashed_pw = hashing.hash_value(pw, salt=user_salt)
+    socialout_auth.salt = user_salt
+    socialout_auth.pw = hashed_pw
+    try:
+        socialout_auth.save()
+    except:
+        return jsonify({'error_message': 'Something went wrong when adding auth method socialout to user.'}), 500
+
+    # Remove verification code -> already used
+    db_verification.delete()
+    
+    return generate_tokens(str(user_id)), 200
