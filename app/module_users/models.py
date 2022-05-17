@@ -159,7 +159,7 @@ class Achievement(db.Model):
     __tablename__ = 'achievements'
 
     # Achievement id
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4())
+    id = db.Column(db.String, primary_key=True)
     # Description
     description = db.Column(db.String, nullable=False)
     # Number of stages to be completed
@@ -183,6 +183,25 @@ class Achievement(db.Model):
     def save(self):
         db.session.add(self)
         db.session.commit()
+    
+    @staticmethod
+    def getAchievementsOfUserId(id):
+        achievement_list = []
+        query_result = db.session.query(Achievement, AchievementProgress) \
+            .join(AchievementProgress, Achievement.id == AchievementProgress.achievement) \
+            .filter(AchievementProgress.user == id) \
+            .all()
+        for achievement, progress in query_result:
+            achievement_item = {
+                'id': achievement.id,
+                'description': achievement.description,
+                'stages': achievement.stages,
+                'progress': progress.progress,
+            }
+            if progress.progress == achievement.stages:
+                achievement_item['completed_at'] = progress.completed_at
+            achievement_list.append(achievement_item)
+        return achievement_list
 
 class AchievementProgress(db.Model):
     __tablename__ = 'achievement_progress'
@@ -190,7 +209,7 @@ class AchievementProgress(db.Model):
     # User id
     user = db.Column(UUID(as_uuid=True), db.ForeignKey(User.id), primary_key=True, default=uuid.uuid4())
     # Achievement id
-    achievement = db.Column(UUID(as_uuid=True), db.ForeignKey(Achievement.id), primary_key=True, default=uuid.uuid4())
+    achievement = db.Column(db.String, db.ForeignKey(Achievement.id), primary_key=True)
     # Progreso
     progress = db.Column(db.Integer, nullable=False, default=0)
     # Fecha completado
