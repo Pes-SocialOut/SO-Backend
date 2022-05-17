@@ -440,7 +440,7 @@ def get_event(id):
     except:
         return jsonify({"error_message": f"The event {event_id} doesn't exist"}), 400
 
-# OBTENER EVENTOS PUR USUARIO CREADOR method: devuelve todos los eventos creados por un usuario
+# OBTENER EVENTOS POR USUARIO CREADOR method: devuelve todos los eventos creados por un usuario
 @module_event_v2.route('/creator', methods=['GET'])
 # RECIBE:
 # - GET HTTP request con la id del usuario del que se quieren obtener los eventos creados como query parameter.
@@ -467,7 +467,7 @@ def get_creations():
     
     try:
         events_creats = Event.query.filter_by(user_creator = user_id)
-        return jsonify([event.toJSON() for event in events_creats]), 201
+        return jsonify([event.toJSON() for event in events_creats]), 200
     except:
         return jsonify({"error_message": "An unexpected error ocurred"}), 400        
 
@@ -556,7 +556,7 @@ def get_all_events():
 # GET HTTP request con los atributos que quiere filtrar (formato JSON)
 #       {name, date_started, date_end}
 # Devuelve:
-@module_event_v2.route('/Filter', methods=['GET'])
+@module_event_v2.route('/filter', methods=['GET'])
 @jwt_required(optional=False)
 def filter_by():
     try:
@@ -566,7 +566,7 @@ def filter_by():
 
     if args.get("name") is not None:
         if len(args.get("name")) == 0:
-            return {"error_message": "EL nom es un string incorrecte"}    
+            return {"error_message": "The name is not defined!"}    
 
     if args.get("date_started") is not None or args.get("date_end") is not None:
         try:
@@ -596,7 +596,7 @@ def filter_by():
         else:
             return jsonify([event.toJSON() for event in events_filter]), 200
     except Exception as e:
-        return jsonify({"error_message": e}), 400
+        return jsonify({"error_message": "hello"}), 400
 
 # OBTENER LOS 10 EVENTOS CREAS MAS RECIENTEMENTE method: Retorna un conjunto con los 10 eventos mas recientes
 @module_event_v2.route('/lastten', methods=['GET'])
@@ -618,6 +618,45 @@ def lastest_events():
     
     return jsonify([event.toJSON() for event in lastten]), 200
 
+
+# SABER QUE PERSONAS SE HAN UNIDO A UN EVENTO method: Retorna el conjunto de users que se han unido a un evento
+@module_event_v2.route('/participants', methods=['GET'])
+@jwt_required(optional=False)
+def who_joined_event():
+    try:
+        args = request.args
+    except:
+        return jsonify({"error_message": "Error loading args"}), 400
+
+    try:
+        if args.get("eventid") is None:
+            return jsonify({"error_message": "the id of the event isn't in the URL as a query parameter with name eventid :("}), 400
+        else:
+            event_id = uuid.UUID(args.get("eventid")) 
+    except:
+        return jsonify({"error_message": "eventid isn't a valid UUID"}), 400
+
+    try:
+        event = Event.query.get(event_id)
+    except:
+        return jsonify({"error_message": f"Error getting the event"}), 400
+
+    if event is None:
+        return jsonify({"error_message": f"The event {event_id} doesn't exist"}), 400
+
+    # TODO todos pueden acceder a esta info?  
+
+    try:
+        participants = Participant.query.filter_by(event_id=event_id)
+    except:
+        return jsonify({"error_message": "Error when querying participants"}), 400
+    
+    participant_list = []
+    
+    for p in participants:
+        participant_list.append(p.user_id)
+
+    return jsonify(participant_list), 200
 
 
 ########################################################################### O T R O S ###########################################################################
@@ -737,8 +776,10 @@ def get_likes_by_user(iduser):
     except:
         return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
 
-    # TODO todos los usuarios pueden conseguir esta info?
-    # TODO si el user_id no existe, vacio o error de usuario no existe?
+    # No todos los usuarios pueden conseguir esta info (ESTO YA MIRA SI EL USUARIO EXISTE O NO, PQ LO COMPARA CON EL TOKEN QUE ES UN USUARIO QUE EXISTE SEGURO)
+    auth_id = get_jwt_identity()
+    if str(user_id) != auth_id:
+        return jsonify({"error_message": "A user can't get the likes of the events of someone else"}), 400       
 
     try:
         likes_user = Like.query.filter_by(user_id = user_id)
@@ -751,6 +792,7 @@ def get_likes_by_user(iduser):
         return jsonify([event.toJSON() for event in events]), 200
     except:
         return jsonify({"error_message": "Unexpected error"}), 400       
+
 
 # SABER SI USUARIO HA DADO LIKE A UN EVENTO method: saber si un usuario ha dado like a un evento
 @module_event_v2.route('/<iduser>/like/<idevento>', methods=['GET'])
