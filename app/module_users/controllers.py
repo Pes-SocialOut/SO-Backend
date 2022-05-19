@@ -12,13 +12,12 @@ from app import db
 
 # Import the hashing object from the main app module
 from app import hashing
-import string
-import random
 
-# Import mailing libs
 import os
-import smtplib
-from email.message import EmailMessage
+
+# Import util functions
+from app.utils.email import send_email
+from app.module_users.utils import user_id_for_email, authentication_methods_for_user_id, send_verification_code_to, generate_tokens, get_random_salt, verify_password_strength
 
 # Import module models
 from app.module_users.models import User, SocialOutAuth, GoogleAuth, FacebookAuth, EmailVerificationPendant, Friend, UserLanguage
@@ -72,7 +71,7 @@ def update_profile(id):
     hobbies = request.json['hobbies']
 
     if len(languages) == 0 or any([l not in ['catalan', 'spanish', 'english'] for l in languages]):
-        return jsonify({'error_message': 'Languages must be as ubset of the following: {catalan, spanish, english}'}), 400
+        return jsonify({'error_message': 'Languages must be a subset of the following: {catalan, spanish, english}'}), 400
 
     user = User.query.filter_by(id = uuid.UUID(id)).first()
     if (user == None):
@@ -249,7 +248,7 @@ def register_socialout():
     verification = request.json['verification']
     
     if len(languages) == 0 or any([l not in ['catalan', 'spanish', 'english'] for l in languages]):
-        return jsonify({'error_message': 'Languages must be as ubset of the following: {catalan, spanish, english}'}), 400
+        return jsonify({'error_message': 'Languages must be a subset of the following: {catalan, spanish, english}'}), 400
 
     # Check no other user exists with that email
     if user_id_for_email(email) != None:
@@ -315,7 +314,7 @@ def register_google():
     hobbies = request.json['hobbies']
     
     if len(languages) == 0 or any([l not in ['catalan', 'spanish', 'english'] for l in languages]):
-        return jsonify({'error_message': 'Languages must be as ubset of the following: {catalan, spanish, english}'}), 400
+        return jsonify({'error_message': 'Languages must be a subset of the following: {catalan, spanish, english}'}), 400
 
     # Get google email from token
     try:
@@ -373,7 +372,7 @@ def register_facebook():
     hobbies = request.json['hobbies']
     
     if len(languages) == 0 or any([l not in ['catalan', 'spanish', 'english'] for l in languages]):
-        return jsonify({'error_message': 'Languages must be as ubset of the following: {catalan, spanish, english}'}), 400
+        return jsonify({'error_message': 'Languages must be a subset of the following: {catalan, spanish, english}'}), 400
 
     # Get email from facebook token
     try:
@@ -662,69 +661,3 @@ def link_facebook_auth_method(args):
     
     return generate_tokens(str(user_id)), 200
 
-
-######################################### UTILITY FUNCTIONS #######################################
-
-def user_id_for_email(email):
-    user = User.query.filter_by(email = email).first()
-    if user == None:
-        return None
-    return user.id
-
-def authentication_methods_for_user_id(id):
-    result = []
-    socialout_auth = SocialOutAuth.query.filter_by(id = id).first()
-    if socialout_auth != None:
-        result.append('socialout')
-    google_auth = GoogleAuth.query.filter_by(id = id).first()
-    if google_auth != None:
-        result.append('google')
-    fb_auth = FacebookAuth.query.filter_by(id = id).first()
-    if fb_auth != None:
-        result.append('facebook')
-    return result
-
-def send_verification_code_to(email):
-    code = get_random_salt(6)
-    # Save code to database
-    db_verification = EmailVerificationPendant.query.filter_by(email = email).first()
-    if db_verification == None:
-        db_verification = EmailVerificationPendant(email, code, datetime.now(timezone.utc)+timedelta(minutes=15))
-        db_verification.save()
-    else:
-        db_verification.code = code
-        db_verification.expires_at = datetime.now(timezone.utc)+timedelta(minutes=15)
-        db.session.commit()
-    send_email(email, 'SocialOut auth verification code', f'Your verification code for SocialOut authentication is {code}. It expires in 15 minutes.')
-
-def send_email(email, subject, body):
-    EMAIL_ADRESS = os.getenv('MAIL_USERNAME')
-    EMAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
-    msg = EmailMessage()
-    msg['Subject'] = subject
-    msg['From'] = EMAIL_ADRESS
-    msg['To'] = email
-    msg.set_content(body)
-
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-        smtp.login(EMAIL_ADRESS, EMAIL_PASSWORD)
-        smtp.send_message(msg)
-
-def generate_tokens(user_id):
-    access_token = create_access_token(identity=user_id)
-    refresh_token = create_refresh_token(identity=user_id)
-    return jsonify(id=user_id,access_token=access_token, refresh_token=refresh_token)
-
-def get_random_salt(length):
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
-
-def verify_password_strength(pw):
-    if len(pw) < 8:
-        return jsonify({'error_message': 'New password must have a length of at least 8 characters'}), 400
-    if (sum(1 for c in pw if c.isupper()) == 0):
-        return jsonify({'error_message': 'New password must have at least one uppercase letter'}), 400
-    if (sum(1 for c in pw if c.islower()) == 0):
-        return jsonify({'error_message': 'New password must have at least one lowercase letter'}), 400
-    if (all([not c.isdigit() for c in pw])):
-        return jsonify({'error_message': 'New password must have at least one number digit'}), 400
-    return {}, 200
