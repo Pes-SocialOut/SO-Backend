@@ -1,7 +1,6 @@
 # Import flask dependencies
 # Import module models (i.e. User)
 import sqlalchemy
-#import spacy
 from app.module_event.models import Event, Participant, Like
 from app.module_users.models import User
 from profanityfilter import ProfanityFilter
@@ -61,7 +60,7 @@ def create_event():
   # restricion: solo puedes crear eventos para tu usuario (mirando Bearer Token)
     auth_id = get_jwt_identity()
     if str(user_creator) != auth_id:
-        return jsonify({"error_message": "Un usuario no puede crear un evento por otra persona"}), 400
+        return jsonify({"error_message": "Un usuario no puede crear un evento por otra persona"}), 403
 
     event = Event(event_uuid, args.get("name"), args.get("description"), date_started, date_end,
                   user_creator, longitud, latitude, max_participants, args.get("event_image_uri"))
@@ -130,7 +129,7 @@ def modify_events_v2(id):
     # restricion: solo el usuario creador puede modificar su evento (mirando Bearer Token)
     auth_id = get_jwt_identity()
     if str(event.user_creator) != auth_id:
-        return jsonify({"error_message": "A user cannot update the events of others"}), 400
+        return jsonify({"error_message": "A user cannot update the events of others"}), 403
 
     event.name = args.get("name")
     event.description = args.get("description")
@@ -177,8 +176,7 @@ def check_atributes(args):
     if args.get("event_image_uri") is None:
         return {"error_message": "atributo event_image_uri no esta en la URL o es null"}
 
-    # TODO restriccion 1: mirar las palabras vulgares en el nombre y la descripcion
-    # spacy.load("en_core_web_sm")
+    # restriccion 1: mirar las palabras vulgares en el nombre y la descripcion
     pf = ProfanityFilter()
     if pf.is_profane(args.get("name")):
         return {"error_message": "The name attribute is vulgar"}
@@ -316,7 +314,7 @@ def join_event(id):
 
     auth_id = get_jwt_identity()
     if str(user_id) != auth_id:
-        return jsonify({"error_message": "A user cannot join a event for others"}), 400
+        return jsonify({"error_message": "A user cannot join a event for others"}), 403
 
     # restriccion: el usuario creador no se puede unir a su propio evento (ya se une automaticamente al crear el evento)
     if event.user_creator == user_id:
@@ -382,7 +380,7 @@ def leave_event(id):
     # restriccion: Un usuario no puede abandonar un evento por otro
     auth_id = get_jwt_identity()
     if str(user_id) != auth_id:
-        return jsonify({"error_message": "A user cannot leave a event for others"}), 400
+        return jsonify({"error_message": "A user cannot leave a event for others"}), 403
 
     # restriccion: el usuario no es participante del evento
     try:
@@ -517,7 +515,7 @@ def delete_event(id):
     # restricion: solo el usuario creador puede eliminar su evento (mirando Bearer Token)
     auth_id = get_jwt_identity()
     if str(event.user_creator) != auth_id:
-        return jsonify({"error_message": "A user cannot delete events if they are not the creator"}), 400
+        return jsonify({"error_message": "A user cannot delete events if they are not the creator"}), 403
 
     # Eliminar todos los participantes del evento ANTES DE ELIMINAR EL EVENTO
     try:
@@ -724,7 +722,7 @@ def create_like(id):
     # Un usuario solo puede dar like por si mismo
     auth_id = get_jwt_identity()
     if str(user_id) != auth_id:
-        return jsonify({"error_message": "A user can't like for others"}), 400
+        return jsonify({"error_message": "A user can't like for others"}), 403
 
     try:
         event_id = uuid.UUID(id)
@@ -771,7 +769,7 @@ def delete_like(id):
 
     auth_id = get_jwt_identity()
     if str(delete_user_id) != auth_id:
-        return jsonify({"error_message": "A user can't remove likes for others"}), 400
+        return jsonify({"error_message": "A user can't remove likes for others"}), 403
 
     try:
         delete_event_id = uuid.UUID(id)
@@ -809,7 +807,7 @@ def get_likes_by_user(iduser):
     # No todos los usuarios pueden conseguir esta info (ESTO YA MIRA SI EL USUARIO EXISTE O NO, PQ LO COMPARA CON EL TOKEN QUE ES UN USUARIO QUE EXISTE SEGURO)
     auth_id = get_jwt_identity()
     if str(user_id) != auth_id:
-        return jsonify({"error_message": "A user can't get the likes of the events of someone else"}), 400
+        return jsonify({"error_message": "A user can't get the likes of the events of someone else"}), 403
 
     try:
         likes_user = Like.query.filter_by(user_id=user_id)
