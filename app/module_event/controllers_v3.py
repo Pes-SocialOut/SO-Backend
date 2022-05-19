@@ -749,7 +749,7 @@ def create_like(id):
 # QUITAR LIKE method: deletes a like from the database
 
 
-@module_event_v3.route('/<id>/like', methods=['DELETE'])
+@module_event_v3.route('/<id>/dislike', methods=['POST'])
 # RECIBE:
 # - DELETE HTTP request con la id del evento que se quiere eliminar
 # DEVUELVE:
