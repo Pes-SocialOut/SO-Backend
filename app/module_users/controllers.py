@@ -148,7 +148,7 @@ def change_password(id):
     except:
         return jsonify({'error_message': f'Something went wrong when changing password for user {id}, {user_salt}, {new_pw}, {hashed_pw} .... {debug}'}), 500
 
-    user = User.query().filter_by(id = uuid.UUID(id)).first()
+    user = User.query.filter_by(id = uuid.UUID(id)).first()
     send_email(user.email, 'SocialOut password change notice!', f'Your password was recently changed, if it was not you, please log into your {user.username} account by clicking on "Forgot password" in the login screen.')
     return generate_tokens(str(user.id)), 200
 
