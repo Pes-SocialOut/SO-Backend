@@ -8,7 +8,7 @@ from flask_jwt_extended import JWTManager
 from flask_hashing import Hashing
 
 # Define the WSGI application object
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/')
 
 # Configurations
 app.config.from_object('config')
