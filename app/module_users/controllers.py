@@ -405,7 +405,7 @@ def register_facebook():
     try:
         facebook_auth.save()
     except:
-        return jsonify({'error_message': 'Something went wrong when adding auth method google to user'}), 500
+        return jsonify({'error_message': 'Something went wrong when adding auth method facebook to user'}), 500
     
     return generate_tokens(str(user_id)), 200
 

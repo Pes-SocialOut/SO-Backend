@@ -276,9 +276,9 @@ class Friend(db.Model):
 class FriendInvite(db.Model):
     __tablename__ = 'friend_invites'
 
-    invitee = db.Column(UUID(as_uuid=True), db.ForeignKey(User.id), primary_key=True, default=uuid.uuid4())
-    code = db.Column(db.Integer, nullable=False)
-    expires_at = db.Column(db.DateTime)
+    invitee = db.Column(UUID(as_uuid=True), db.ForeignKey(User.id), default=uuid.uuid4(), nullable=False)
+    code = db.Column(db.String, primary_key=True)
+    expires_at = db.Column(db.DateTime, nullable=False)
 
     def __init__(self, invitee, code, expires_at):
         self.invitee = invitee
