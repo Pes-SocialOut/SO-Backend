@@ -24,6 +24,7 @@ services:
     depends_on:
       - db
     environment:
+      API_DOMAIN_NAME: ${API_DOMAIN_NAME}
       API_PORT: ${API_PORT}
       API_DEBUG: ${API_DEBUG}
       API_SECRET_KEY: ${API_SECRET_KEY}
