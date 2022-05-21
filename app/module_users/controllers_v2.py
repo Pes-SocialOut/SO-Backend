@@ -1,6 +1,7 @@
 # Import flask dependencies
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
+import os
 import uuid
 
 # Import the database object from the main app module
@@ -11,7 +12,7 @@ from app.utils.email import send_email
 from app.module_users.utils import user_id_for_email, authentication_methods_for_user_id, send_verification_code_to, generate_tokens, get_random_salt, verify_password_strength
 
 # Import module models
-from app.module_users.models import User, Achievement, AchievementProgress, Friend, UserLanguage, EmailVerificationPendant, SocialOutAuth
+from app.module_users.models import FriendInvite, User, Achievement, AchievementProgress, Friend, UserLanguage, EmailVerificationPendant, SocialOutAuth
 
 # Import the hashing object from the main app module
 from app import hashing
@@ -125,3 +126,47 @@ def reset_forgotten_password():
     db_verification.delete()
     
     return generate_tokens(str(user_id)), 200
+
+@module_users_v2.route('/friend_link', methods=['GET'])
+@jwt_required(optional=False)
+def request_new_friend_link():
+    auth_id = uuid.UUID(get_jwt_identity())
+
+    user_invites = FriendInvite.query.filter_by(invitee = auth_id).filter(FriendInvite.expires_at > datetime.now(timezone.utc)).all()
+    if len(user_invites) >= 5:
+        return jsonify({'error_message': f'You already have {len(user_invites)} invitation links active.'}), 409
+
+    code = get_random_salt(15)
+    new_invite = FriendInvite(auth_id, code, datetime.now(timezone.utc)+timedelta(days=3))
+    try:
+        new_invite.save()
+    except:
+        return jsonify({"error_message": "Something went wrong inserting new invitation code to DB: {code}"}), 500
+
+    link = os.getenv('API_DOMAIN_NAME') + f'/v2/users/new_friend?code={code}'
+    return jsonify({'invite_link': link}), 200
+
+@module_users_v2.route('/new_friend', methods=['GET'])
+@jwt_required(optional=False)
+def accept_friend_link():
+    if not (request.args and 'code' in request.args):
+        return jsonify({"error_message": "Missing argument code"}), 400
+
+    code = request.args['code']
+
+    auth_id = uuid.UUID(get_jwt_identity())
+    
+    invitation = FriendInvite.query.filter_by(code = code).filter(FriendInvite.expires_at > datetime.now(timezone.utc)).first()
+    if invitation == None:
+        return jsonify({"error_message": "Code does not exist or it has expired"}), 404
+    
+    if invitation.invitee == auth_id:
+        return jsonify({"error_message": "Can't add yourself as your frind, but you dou have high self esteem."}), 400
+    
+    if invitation.invitee in [user.id for user in Friend.getFriendsOfUserId(auth_id)]:
+        return jsonify({"error_message": "You are already friends with this user"}), 409
+    
+    friendship = Friend(invitation.invitee, auth_id)
+    friendship.save()
+    invitation.delete()
+    return get_profile(str(invitation.invitee))
