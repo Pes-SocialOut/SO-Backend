@@ -120,4 +120,4 @@ def main(db_uri):
     save_current_triangulation(triangulation, air_data, engine)
 
 if __name__ == '__main__':
-    main(os.getenv("DATABASE_URL"))
+    main(os.getenv("SQLALCHEMY_DATABASE_URL"))

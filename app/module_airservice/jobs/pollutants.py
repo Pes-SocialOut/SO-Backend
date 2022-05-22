@@ -38,6 +38,6 @@ def insert_pollutant_data(contaminantes: dict, engine) -> None:
             )
 
 if __name__ == '__main__':
-    engine = create_engine(os.getenv("DATABASE_URL"))
+    engine = create_engine(os.getenv("SQLALCHEMY_DATABASE_URL"))
     insert_pollutant_data(contaminantes, engine)
 
