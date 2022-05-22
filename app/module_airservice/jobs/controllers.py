@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 import string
 import random
@@ -26,7 +26,7 @@ def extract_data_from_api_job():
     
     ini_time = datetime.now()
     try:
-        data_extraction(os.getenv("DATABASE_URL"))
+        data_extraction(current_app.config.get('SQLALCHEMY_DATABASE_URI'))
     except Exception as e:
         return str(e), 400
     delta = datetime.now() - ini_time
@@ -43,7 +43,7 @@ def calculate_triangulation_job():
     
     ini_time = datetime.now()
     try:
-        triangulation(os.getenv("DATABASE_URL"))
+        triangulation(current_app.config.get('SQLALCHEMY_DATABASE_URI'))
     except Exception as e:
         return str(e), 400
     delta = datetime.now() - ini_time
