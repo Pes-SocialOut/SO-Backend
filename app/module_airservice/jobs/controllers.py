@@ -26,7 +26,7 @@ def extract_data_from_api_job():
     
     ini_time = datetime.now()
     try:
-        data_extraction(os.getenv("SQLALCHEMY_DATABASE_URI"))
+        data_extraction(os.getenv("DATABASE_URL"))
     except Exception as e:
         return str(e), 400
     delta = datetime.now() - ini_time
@@ -43,7 +43,7 @@ def calculate_triangulation_job():
     
     ini_time = datetime.now()
     try:
-        triangulation(os.getenv("SQLALCHEMY_DATABASE_URI"))
+        triangulation(os.getenv("DATABASE_URL"))
     except Exception as e:
         return str(e), 400
     delta = datetime.now() - ini_time
