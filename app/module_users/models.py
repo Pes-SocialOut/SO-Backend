@@ -160,19 +160,22 @@ class Achievement(db.Model):
 
     # Achievement id
     id = db.Column(db.String, primary_key=True)
+    # Title
+    title = db.Column(db.String, nullable=False)
     # Description
     description = db.Column(db.String, nullable=False)
     # Number of stages to be completed
     stages = db.Column(db.Integer, nullable=False, default=1)
 
     # To CREATE an instance of a Achievement
-    def __init__(self, id, description, stages):
+    def __init__(self, id, title, description, stages):
         self.id = id
+        self.title = title
         self.description = description
         self.stages = stages
 
     def __repr__(self):
-        return f'Achievement({self.id}, {self.description}, {self.stages})'
+        return f'Achievement({self.id}, {self.title}, {self.description}, {self.stages})'
 
     # To DELETE a row from the table
     def delete(self):
@@ -194,6 +197,7 @@ class Achievement(db.Model):
         for achievement, progress in query_result:
             achievement_item = {
                 'id': achievement.id,
+                'title': achievement.title,
                 'description': achievement.description,
                 'stages': achievement.stages,
                 'progress': progress.progress,
