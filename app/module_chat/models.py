@@ -26,19 +26,20 @@ class Chat(db.Model):
     __tablename__ = 'chat'
 
     #id del Chat
-    id = db.Column(UUID(as_uuid = True), primary_key = True, default = uuid.uuid4())
+    id = db.Column(UUID(as_uuid = True), primary_key = True)
 
     #id del event
-    event_id = db.Column(UUID(as_uuid = True) , nullable = False)
+    event_id = db.Column(UUID(as_uuid = True), nullable = False)
 
     #id del creador del event
     creador_id = db.Column(UUID(as_uuid = True), nullable = False)
 
     #id del usuari participant
-    participant_id = db.Column(UUID(as_uuid = True) , nullable = False)
+    participant_id = db.Column(UUID(as_uuid = True), nullable = False)
 
     #To create a instance of a Chat
-    def __init__(self, event_id, creador_id, participant_id):
+    def __init__(self, id, event_id, creador_id, participant_id):
+        self.id = id
         self.event_id = event_id
         self.creador_id = creador_id
         self.participant_id = participant_id
@@ -73,7 +74,7 @@ class Message(db.Model):
     __tablename__ = 'message'
 
     #id del missatge
-    id = db.Column(UUID(as_uuid = True), primary_key=True, default = uuid.uuid4())
+    id = db.Column(UUID(as_uuid = True), primary_key=True)
 
     #id del usuari que ho envia
     sender_id = db.Column(UUID(as_uuid=True) , nullable = False)   
@@ -88,7 +89,8 @@ class Message(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default =  datetime.now() + timedelta(hours=2))
 
     # To create a instance of Message
-    def __init__(self, sender_id, chat_id, text):
+    def __init__(self, id, sender_id, chat_id, text):
+        self.id = id
         self.sender_id = sender_id
         self.chat_id = chat_id
         self.text = text

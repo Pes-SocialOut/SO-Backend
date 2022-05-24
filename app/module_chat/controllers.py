@@ -48,12 +48,14 @@ def create_chat():
     except:
         return jsonify({"error message": "The participant id is not a valid uuid"}), 400
 
-    New_Chat = Chat(event_id, creador_id, participant_id)
+    id = uuid.uuid4()
+
+    New_Chat = Chat(id, event_id, creador_id, participant_id)
 
     try:
         New_Chat.save()
-    except sqlalchemy.exc.IntegrityError:
-        return jsonify({"error message": "FK problems, the user or the event doesn't exists"}), 400
+    #except sqlalchemy.exc.IntegrityError:
+       # return jsonify({"error message": "FK problems, the user or the event doesn't exists"}), 400
     except:
         return jsonify({"error_message": "Something happened in the insert"}), 400
     
@@ -94,12 +96,14 @@ def create_message():
     except:
         return jsonify({"error message": "The chat id not is a valid uuid"})
 
-    Message_new = Message(sender_id, chat_id, args.get("text"))
+    id = uuid.uuid4()
+
+    Message_new = Message(id, sender_id, chat_id, args.get("text"))
 
     try: 
         Message_new.save()
-    except sqlalchemy.exc.IntegrityError:
-        return jsonify({"error message": "FK problems, the user or the event doesn't exists"}), 400
+    #except sqlalchemy.exc.IntegrityError:
+        #return jsonify({"error message": "FK problems, the user or the event doesn't exists"}), 400
     except:
         return jsonify({"error_message": "Something happened in the insert"}), 400
 
