@@ -156,10 +156,10 @@ def modify_events_v2(id):
 # Devuelve: Diccionario con un mensaje de error o un mensaje de todo bien
 def check_atributes(args):
     # restriccion 0: Mirar si los atributos estan en el body
-    if args.get("name") is None or len(args.get("name")) == 0:
-        return {"error_message": "atributo name no esta en el body, es null o esta vacio"}
-    if args.get("description") is None or len(args.get("description")) == 0:
-        return {"error_message": "atributo description no esta en el body, es null o esta vacio"}
+    if args.get("name") is None:
+        return {"error_message": "atributo name no esta en el body o es null"}
+    if args.get("description") is None:
+        return {"error_message": "atributo description no esta en el body o es null"}
     if args.get("date_started") is None:
         return {"error_message": "atributo date_started no esta en la URL o es null"}
     if args.get("date_end") is None:
@@ -885,8 +885,8 @@ def get_top_ten_events():
 # CREAR UNA REVIEW: crear una review de un evento
 @module_event_v3.route('/review', methods=['POST'])
 # DEVUELVE:
-# - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
-# - 200: Un objeto JSON con los top 10 eventos con mas likes
+# - 400 o 403: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
+# - 200: Un objeto JSON con los atributos de la review creada
 @jwt_required(optional=False)
 def crear_review():
     try:
@@ -899,7 +899,7 @@ def crear_review():
         return {"error_message": "atributo event_id no esta en el body o es null"}
     if args.get("user_id") is None:
         return {"error_message": "atributo user_id no esta en el body o es null"}
-    if args.get("comment") is None or len(args.get("comment")) == 0:
+    if args.get("comment") is None:
         return {"error_message": "atributo comment no esta en el body, es null o esta vacio"}
     if args.get("rating") is None:
         return {"error_message": "atributo rating no esta en el body, es null"}
@@ -928,6 +928,8 @@ def crear_review():
     # restriccion 4: el comentario tiene que ser una string y no puede ser mas largo que 500 caracteres
     if not isinstance(args.get("comment"), str):
         return {"error_message": "comment isn't a string!"}
+    if len(args.get("comment")) == 0:
+        return {"error_message": "comment can't be empty!"}
     if len(args.get("comment")) > 500:
         return {"error_message": "el comentario es demasiado largo, pasa los 500 caracteres"}
 
@@ -971,3 +973,44 @@ def crear_review():
     # Devolver nueva review en formato JSON si todo ha funcionado correctamente
     ratingJSON = new_rating.toJSON()
     return jsonify(ratingJSON), 201
+
+
+# LISTAR TODAS LAS REVIEW DE UN EVENTO: crear una review de un evento
+@module_event_v3.route('/review', methods=['GET'])
+# DEVUELVE:
+# - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
+# - 200: Un objeto JSON con los atributos de la review creada
+@jwt_required(optional=False)
+def get_reviews_evento():
+    
+    try:
+        args = request.args
+    except:
+        return jsonify({"error_message": "Error loading args"}), 400
+
+    # restriccion: el evento tiene que estar en la URL, ser una UUID valida y ha de existir
+    try:
+        if args.get("eventid") is None:
+            return jsonify({"error_message": "the id of the event isn't in the URL as a query parameter with name eventid :("}), 400
+        else:
+            event_id = uuid.UUID(args.get("eventid"))
+    except:
+        return jsonify({"error_message": "eventid isn't a valid UUID"}), 400
+
+    event = Event.query.get(event_id)
+    if event is None:
+        return jsonify({"error_message": f"Event {event_id} doesn't exist"}), 400
+    
+    # TODO Quien puede acceder a estos datos? Creador solo o todos los usuarios?
+
+    try:
+        reviews = Review.query.filter_by(event_id=event_id)
+    except:
+        return jsonify({"error_message": "Error querying the reviews"}), 400
+    
+    review_list = []
+
+    for r in reviews:
+        review_list.append(r)
+
+    return jsonify([review.toJSON() for review in reviews]), 200

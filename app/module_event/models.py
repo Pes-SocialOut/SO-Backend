@@ -74,7 +74,10 @@ class Event(db.Model):
         db.session.commit()
 
     @staticmethod
-    # To GET ALL ROWS Eventuery.all()
+    # To GET ALL ROWS
+    def get_all():
+        return Event.query.all()
+        
     # To CONVERT an Event object to a dictionary
     def toJSON(self):
         return {
