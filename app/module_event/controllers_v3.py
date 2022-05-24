@@ -240,41 +240,8 @@ def check_atributes(args):
             return {"error_message": "la imagen del evento no es una URL valida"}
 
     # TODO restriccion 10: mirar si la imagen es una imagen vulgar
-    # event_image_uri = args.get("event_image_uri")
-    # is_it_safe = detect_safe_search_uri(event_image_uri)
-    # for category in is_it_safe:
-    #     if(is_it_safe[category] == 'UNKNOWN' | is_it_safe[category] == 'POSSIBLE' | is_it_safe[category] == 'LIKELY' | is_it_safe[category] == 'VERY_LIKELY'):
-    #         return {"error_message": "la imagen del evento no puede ser explicita (hemos detectado que podria serlo)"}
 
     return {"error_message": "all good"}
-
-
-# def detect_safe_search_uri(uri):
-#    """Detects unsafe features in the file located in Google Cloud Storage or
-#    on the Web."""
-#    client = vision.ImageAnnotatorClient()
-#    image = vision.Image()
-#    image.source.image_uri = uri
-#
-#    is_it_safe = {}
-
-#    response = client.safe_search_detection(image=image)
-#    safe = response.safe_search_annotation
-
-    # Names of likelihood from google.cloud.vision.enums
-#    likelihood_name = ('UNKNOWN', 'VERY_UNLIKELY', 'UNLIKELY', 'POSSIBLE',
-#                       'LIKELY', 'VERY_LIKELY')
-
-#    is_it_safe["adult"] = likelihood_name[safe.adult]
-#    is_it_safe["medical"] = likelihood_name[safe.medical]
-#    is_it_safe["spoofed"] = likelihood_name[safe.spoof]
-#    is_it_safe["violence"] = likelihood_name[safe.violence]
-#    is_it_safe["racy"] = likelihood_name[safe.racy]
-
-#    if response.error.message:
-#        return {"error_message": "la imagen del evento no se ha compilado correctamente"}
-
-#    return is_it_safe
 
 
 # UNIRSE EVENTO: Usuario se une a un evento
