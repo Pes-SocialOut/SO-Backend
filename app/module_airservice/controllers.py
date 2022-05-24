@@ -60,7 +60,7 @@ def general_quality_at_a_point_aux():
         lat = float(request.args.get('lat'))
     except ValueError:
         return jsonify({"error_message":"<long> and <lat> query parameters must be of type float"}), 400
-    general_quality_at_a_point(long, lat)
+    return general_quality_at_a_point(long, lat)
 
 def general_quality_at_a_point(long, lat):
     try:
