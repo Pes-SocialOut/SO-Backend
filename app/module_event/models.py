@@ -1,12 +1,14 @@
 # Import the database object (db) from the main application module
 # We will define this inside /app/__init__.py in the next sections.
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, Integer
 from app import db
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
 import uuid
 
 # Define an Event model
+
+
 class Event(db.Model):
 
     __tablename__ = 'events'
@@ -22,9 +24,11 @@ class Event(db.Model):
     # End date of the event
     date_end = db.Column(db.DateTime, nullable=False)
     # Date of creation of the event
-    date_creation = db.Column(db.DateTime, nullable=False, default =  datetime.now())
+    date_creation = db.Column(
+        db.DateTime, nullable=False, default=datetime.now())
     # Creator of the event (with FK)
-    user_creator = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id') , nullable=False)
+    user_creator = db.Column(
+        UUID(as_uuid=True), db.ForeignKey('users.id'), nullable=False)
     # Longitude of the location where the event will take taking place
     longitud = db.Column(db.Float, nullable=False)
     # Latitude of the location where the event will take taking place
@@ -34,7 +38,8 @@ class Event(db.Model):
     # Image of event (can be null)
     event_image_uri = db.Column(db.String, default="", nullable=True)
     # Relationship with Participant
-    participants_in_event = db.relationship('Participant', backref='participants', lazy=True)
+    participants_in_event = db.relationship(
+        'Participant', backref='participants', lazy=True)
 
     # To CREATE an instance of an Event
     def __init__(self, id, name, description, date_started, date_end, user_creator, longitud, latitude, max_participants, event_image_uri):
@@ -49,8 +54,8 @@ class Event(db.Model):
         self.max_participants = max_participants
         self.event_image_uri = event_image_uri
 
+    # To FORMAT an Event in a readable string format
 
-    # To FORMAT an Event in a readable string format 
     def __repr__(self):
         return '''Event(id: ' + str(self.id) + ', name: ' + str(self.name) + ', description: ' + str(self.description) +
                 ', date_started: ' + str(self.date_started) + ', date_end: ' + str(self.date_end) +
@@ -62,17 +67,14 @@ class Event(db.Model):
     def delete(self):
         db.session.delete(self)
         db.session.commit()
-    
+
     # To SAVE a row from the table
     def save(self):
         db.session.add(self)
         db.session.commit()
 
     @staticmethod
-    # To GET ALL ROWS of the table
-    def get_all():
-        return Event.query.all()
-
+    # To GET ALL ROWS Eventuery.all()
     # To CONVERT an Event object to a dictionary
     def toJSON(self):
         return {
@@ -89,68 +91,73 @@ class Event(db.Model):
             "event_image_uri": self.event_image_uri
         }
 
-#Define the like class model
+# Define the like class model
+
+
 class Like(db.Model):
 
     __tablename__ = 'likes'
 
     # Event id
-    event_id = db.Column(UUID(as_uuid=True), db.ForeignKey('events.id'), primary_key=True)
+    event_id = db.Column(UUID(as_uuid=True), db.ForeignKey(
+        'events.id'), primary_key=True)
     # User id
-    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id'), primary_key=True )
+    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey(
+        'users.id'), primary_key=True)
 
-    
-    #To create an instance of Like
+    # To create an instance of Like
+
     def __init__(self, user_id, event_id):
 
         self.user_id = user_id
         self.event_id = event_id
 
-    #To FORMAT an Like in a readable string format
+    # To FORMAT an Like in a readable string format
     def __repr__(self):
         return 'Like(user_id: ' + str(self.user_id) + ', event_id: ' + str(self.event_id) + ').'
 
-    #To DELETE a row from the table
+    # To DELETE a row from the table
     def delete(self):
         db.session.delete(self)
         db.session.commit()
 
-    #To SAVE a row from the table
+    # To SAVE a row from the table
     def save(self):
         db.session.add(self)
         db.session.commit()
 
-    #To GET ALL ROWS of the table
+    # To GET ALL ROWS of the table
     def get_all():
         return Like.query.all()
 
-    #To CONVERT an Eent objecto to a dictionary
+    # To CONVERT an Eent objecto to a dictionary
     def toJSON(self):
         return{
             "user_id": self.user_id,
             "event_id": self.event_id
         }
-    
 
 
-# Define an Event model
+# Define a Participant model
 class Participant(db.Model):
 
     __tablename__ = 'participant'
 
     # Event id
-    event_id = db.Column(UUID(as_uuid=True), db.ForeignKey('events.id'), primary_key=True)
+    event_id = db.Column(UUID(as_uuid=True), db.ForeignKey(
+        'events.id'), primary_key=True)
     # User id
-    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id'), primary_key=True )
-    
+    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey(
+        'users.id'), primary_key=True)
 
-    # To CREATE an instance of an Event
+    # To CREATE an instance of a Participant
+
     def __init__(self, event_id, user_id):
 
         self.event_id = event_id
         self.user_id = user_id
 
-    # To FORMAT an Event in a readable string format 
+    # To FORMAT a Participant in a readable string format
     def __repr__(self):
         return 'Participant(event_id: ' + str(self.event_id) + ', user_id: ' + str(self.user_id) + ').'
 
@@ -158,7 +165,7 @@ class Participant(db.Model):
     def delete(self):
         db.session.delete(self)
         db.session.commit()
-    
+
     # To SAVE a row from the table
     def save(self):
         db.session.add(self)
@@ -167,7 +174,7 @@ class Participant(db.Model):
     @staticmethod
     # To GET ALL ROWS of the table
     def get_all():
-        return Event.query.all()
+        return Participant.query.all()
 
     # To CONVERT a Participant object to a dictionary
     def toJSON(self):
@@ -176,3 +183,55 @@ class Participant(db.Model):
             "user_id": self.user_id,
         }
 
+
+# Define a Review model
+class Review(db.Model):
+
+    __tablename__ = 'review'
+
+    # Event id
+    event_id = db.Column(UUID(as_uuid=True), db.ForeignKey(
+        'events.id'), primary_key=True)
+    # User id
+    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey(
+        'users.id'), primary_key=True)
+    # Rating of the review
+    rating = db.Column(db.Integer, nullable=False)
+    # Comment de una review
+    comment = db.Column(db.String, nullable=False)
+
+    # To CREATE an instance of a Review
+
+    def __init__(self, event_id, user_id, rating, comment):
+        self.event_id = event_id
+        self.user_id = user_id
+        self.rating = rating
+        self.comment = comment
+
+    # To FORMAT a Review in a readable string format
+    def __repr__(self):
+        return 'Review(event_id: ' + str(self.event_id) + ', user_id: ' + str(self.user_id) + ', rating: ' + str(self.rating) + ', comment: ' + str(self.comment) + ').'
+
+    # To DELETE a row from the table
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+
+    # To SAVE a row from the table
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
+    @staticmethod
+    # To GET ALL ROWS of the table
+    def get_all():
+        return Review.query.all()
+
+    # To CONVERT a Review object to a dictionary
+    def toJSON(self):
+        return {
+            "event_id": self.event_id,
+            "user_id": self.user_id,
+            "rating": self.rating,
+            "comment": self.comment
+        }
