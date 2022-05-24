@@ -1,10 +1,7 @@
 # Import Flask dependences
 # Import module models
-import sqlalchemy
-from app import db
 from app.module_chat.models import Message, Chat
 from flask_jwt_extended import get_jwt_identity, jwt_required
-from datetime import datetime
 import uuid
 from flask import Blueprint, jsonify, request
 
