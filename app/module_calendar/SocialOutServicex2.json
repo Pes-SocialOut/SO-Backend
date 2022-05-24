@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "socialout-frontend",
+  "private_key_id": "08d9d12b9f8ecd8dc3185ac8d7b737ea32dcfd99",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEuwIBADANBgkqhkiG9w0BAQEFAASCBKUwggShAgEAAoIBAQCwpNd9fRDsb44E\ncI+/4aaTFGgTDBOUMjoW+KcdPzzviVTODC6FVcao8vN0QP2QWjE38joB3PjXV+hP\nWir337hL7jR4rc5efF/K1e4Xe24MrmgdGtZCmC1ZVJHgwMHdRx5eirrI6Fr59b+V\nd3FNz2ZvJYa8IUqjaXvyq98O5IRn5dG7RDF+44fd/gx0ZqQ57dU3wm+tgynCFcip\n0xmg+cXgUYMoEeOkGTxjVr3SoQmXDSKhUE3S6bgJBnEAKwdrvs5xaQiCB5v+k5nb\nWcCqScYYb7oP5q3AyqafXBzbw7T+SmuQ+WgTm+/Hd26vs4IC/LhQiYsFvvDpiEur\nbqy1Vd41AgMBAAECgf8azhSaQs8U3+t8t55EaHHECIH6uV8ZwdzZtWHYjMTGuhgQ\nE2hft0VA6n3rAlvb4brkVsYonlGOs2wxJ9BghR1hMCO2owC43BDrq9LLUClkjiux\n54rKxVAP5TqCdOMoOMA44E4wBf+vPLLnCY7eqHNOkw1goVt+pbzpVkeKypxNCGZx\nsfkiMv3S+ywe5tPZwaLpx9jUK40q9xlFoo3+xYScnUqUuogLjwAcZhzpkKJIHAnG\nSo1z74SdFysNzbH3R+0chR/bAXTD2I5QJvKS382zg4Vs4e+ocStMywAX4RMzVPpx\nP35q4+KK5l3vXCC0OrXuBs7ErTuJqxHP5j5vN/ECgYEA5dBL4raiDL/xmaqI57i4\nI8Y4Vo0zASYseYceFerih5iwTir5Uqb1RgVJVNqzZAPVeUBvZ6+Zng0y+dySO+IU\n2leQTBwqknp1T4dr5FA2GmLjjPId94NnzDgJa6zELkLos2WK6Er+sHaOEHfzjb2A\npwQQLsja/wpcJuvgeFWNT6UCgYEAxMWTJuJxmS44q/rDHX09vCOw4xVZ6JT4eCAA\ndAvcAhep4cUSMz99lucYB5C7zB2biTFh5cZo2DPZFQbuyme03tSlUNjkGuYkIakR\n9FbAN8TQv3WIcweAM0IpxsmmIyhn+YvdLeLvPA/9NijVmcMcg6crKwpndIl5jNQs\nJyoRD1ECgYEAthhzWMPv6XxZ2rH24u1J8wbIc0RUqs9tpCn9G87PCjRhVr7Uabpj\nVMUxkuvsAw7KotX8sELCzSqWPseYk5yTe2Kwsq4KyaAAvjCGvBUWmZfLyE28kvfr\nUjUAufHeTO21ZxjJlUB/SKHX9ZKmSKRkgXJFxFxgsn+p/ykd5xua6gUCgYA5JUwU\nGeV14CeTQrNRqCK6tf7UJEpFMqZqdJjNGvidHvQ2Xj5n5cN6hMjEwbLYl6ypDk9p\nJNMkHwKniajl3XJ42HbeYO72JOpPYEOXm24dhCo/wEmNZptDx65MThnS0hRIM+db\nQTHLVrVp+jf2fOSWE4GE8XOUM6y6SpA8G4py0QKBgEE13k0JiYZs6SHzQdArjSXT\nKvMFsEMLZnD39CG6elbSlLaDh7iT7Z/G+46UesCVks/f0MmO8QBH0Cw3ecAZ5Chv\nYWUlzrnAGvLGs+66Co5Zuh1ix8wQxi7vdXAOYr5OoSHlIBen63x6J8QBPk72421e\nSf1gvRWI4xUDqHJjreVi\n-----END PRIVATE KEY-----\n",
+  "client_email": "socialoutserviceaccount@socialout-frontend.iam.gserviceaccount.com",
+  "client_id": "101598396911924284575",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/socialoutserviceaccount%40socialout-frontend.iam.gserviceaccount.com"
+}
