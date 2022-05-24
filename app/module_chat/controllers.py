@@ -152,7 +152,7 @@ def delete_event():
 
     
 # GET method: get all chats from a user as creator
-@module_chat_v1.route('/id', methods=['GET'])
+@module_chat_v1.route('/<id>', methods=['GET'])
 # RECIBE:
     # GET HTTP request con la id del usuario del que queremos obtener los chats
 # DEVUELVE
