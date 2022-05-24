@@ -116,7 +116,7 @@ class Message(db.Model):
             "sender_id": self.sender_id,
             "chat_id": self.chat_id,
             "text": self.text,
-            "created_ad": self.created_at
+            "created_at": self.created_at
         }
 
 
