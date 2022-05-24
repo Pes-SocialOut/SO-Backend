@@ -1,7 +1,7 @@
 from flask import jsonify
 from flask_jwt_extended import create_access_token, create_refresh_token
 # Import module models
-from app.module_users.models import User, SocialOutAuth, GoogleAuth, FacebookAuth, EmailVerificationPendant
+from app.module_users.models import User, SocialOutAuth, GoogleAuth, FacebookAuth, EmailVerificationPendant, Achievement, AchievementProgress
 from app.utils.email import send_email
 import string
 import random
@@ -58,3 +58,19 @@ def verify_password_strength(pw):
     if (all([not c.isdigit() for c in pw])):
         return jsonify({'error_message': 'New password must have at least one number digit'}), 400
     return {}, 200
+
+def increment_achievement_of_user(ach, user):
+    ach_updated = False
+    achievement_progress = AchievementProgress.query.filter_by(achievement = ach).filter_by(user = user).first()
+    if achievement_progress == None:
+        achievement_progress = AchievementProgress(user, ach, 1, None)
+        ach_updated = True
+    else:
+        achievement_template = Achievement.query.filter_by(achievement = ach).first()
+        if achievement_progress.progress < achievement_template.stages:
+            ach_updated = True
+            achievement_progress.progress += 1
+            if achievement_progress.progress == achievement_template.stages:
+                achievement_progress.completed_at = datetime.now()
+    if ach_updated:
+        achievement_progress.save()
