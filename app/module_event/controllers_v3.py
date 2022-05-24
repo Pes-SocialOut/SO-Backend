@@ -1,13 +1,12 @@
 # Import flask dependencies
 # Import module models (i.e. User)
 import sqlalchemy
-from app.module_event.models import Event, Participant, Like
+from app.module_event.models import Event, Participant, Like, Review
 from app.module_users.models import User
 from profanityfilter import ProfanityFilter
 from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity, jwt_required
 from datetime import datetime
 from flask import (Blueprint, request, jsonify)
-#from google.cloud import vision
 import uuid
 import validators
 
@@ -157,10 +156,10 @@ def modify_events_v2(id):
 # Devuelve: Diccionario con un mensaje de error o un mensaje de todo bien
 def check_atributes(args):
     # restriccion 0: Mirar si los atributos estan en el body
-    if args.get("name") is None or len(args.get("name")) == 0:
-        return {"error_message": "atributo name no esta en el body, es null o esta vacio"}
-    if args.get("description") is None or len(args.get("description")) == 0:
-        return {"error_message": "atributo description no esta en el body, es null o esta vacio"}
+    if args.get("name") is None:
+        return {"error_message": "atributo name no esta en el body o es null"}
+    if args.get("description") is None:
+        return {"error_message": "atributo description no esta en el body o es null"}
     if args.get("date_started") is None:
         return {"error_message": "atributo date_started no esta en la URL o es null"}
     if args.get("date_end") is None:
@@ -508,6 +507,8 @@ def delete_event(id):
         except:
             return jsonify({"error_message": "error while deleting likes of an event"}), 400
 
+    # TODO Eliminar las reviews de un evento ANTES DE ELIMINAR EL EVENTO
+
     try:
         event.delete()
         return jsonify({"error_message": "Successful DELETE"}), 202
@@ -649,7 +650,7 @@ def who_joined_event():
     return jsonify(participant_list), 200
 
 
-########################################################################### O T R O S ###########################################################################
+########################################################################### O T R O S ########################################################
 
 
 # If the event doesn't exist
@@ -665,7 +666,7 @@ def teardown_request(exception):
     db.session.remove()
 
 
-########################################################################### L I K E S ###########################################################################
+########################################################################### L I K E S #############################################################
 
 
 # DAR LIKE method: un usuario le da like a un evento
@@ -713,9 +714,8 @@ def create_like(id):
     LikeJSON = Nuevo_like.toJSON()
     return jsonify(LikeJSON), 201
 
+
 # QUITAR LIKE method: deletes a like from the database
-
-
 @module_event_v3.route('/<id>/dislike', methods=['POST'])
 # RECIBE:
 # - DELETE HTTP request con la id del evento que se quiere eliminar
@@ -755,9 +755,8 @@ def delete_like(id):
     except:
         return jsonify({"error_message": f"The like of user {delete_user_id} in event {delete_event_id} doesn't exist"}), 400
 
+
 # LIKES DE UN USER: todos los eventos a los que un usuario ha dado like
-
-
 @module_event_v3.route('/like/<iduser>', methods=['GET'])
 # RECIBE:
 # - GET HTTP request con la id del usuario que queremos solicitar
@@ -806,6 +805,7 @@ def get_likes_from_user(iduser, idevento):
     user = User.query.get(user_id_q)
     if user is None:
         return jsonify({"error_message": f"User {user_id_q} doesn't exist"}), 400
+
     try:
         event_id_q = uuid.UUID(idevento)
     except:
@@ -878,3 +878,139 @@ def get_top_ten_events():
         top_ten_with_info.append(event_to_add)
 
     return jsonify([event.toJSON() for event in top_ten_with_info]), 200
+
+
+########################################################################### R E V I E W S ##################################################################
+
+# CREAR UNA REVIEW: crear una review de un evento
+@module_event_v3.route('/review', methods=['POST'])
+# DEVUELVE:
+# - 400 o 403: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
+# - 200: Un objeto JSON con los atributos de la review creada
+@jwt_required(optional=False)
+def crear_review():
+    try:
+        args = request.json
+    except:
+        return jsonify({"error_message": "Mira el JSON body de la request, hay un atributo mal definido"}), 400
+
+    # restriccion 0: Mirar si los atributos estan en el body
+    if args.get("event_id") is None:
+        return {"error_message": "atributo event_id no esta en el body o es null"}
+    if args.get("user_id") is None:
+        return {"error_message": "atributo user_id no esta en el body o es null"}
+    if args.get("comment") is None:
+        return {"error_message": "atributo comment no esta en el body, es null o esta vacio"}
+    if args.get("rating") is None:
+        return {"error_message": "atributo rating no esta en el body, es null"}
+
+    # restriccion 1: event_id tiene que ser una UUID valida y tiene que existir
+    try:
+        event_id = uuid.UUID(args.get("event_id"))
+    except:
+        return jsonify({"error_message": "Event_id isn't a valid UUID"}), 400
+
+    event = Event.query.get(event_id)
+    if event is None:
+        return jsonify({"error_message": f"Event {event_id} doesn't exist"}), 400
+
+    # restriccion 2: El user_id tiene que ser una UUID valida
+    try:
+        user_id = uuid.UUID(args.get("user_id"))
+    except:
+        return jsonify({"error_message": "User_id isn't a valid UUID"}), 400
+
+    # restriccion 3: Un usuario no puede dar una review por otra persona (por extra seguridad). Tmb implicitamente comprovamos si el usuario existe
+    auth_id = get_jwt_identity()
+    if str(user_id) != auth_id:
+        return jsonify({"error_message": "A user can't create a review for others"}), 403
+
+    # restriccion 4: el comentario tiene que ser una string y no puede ser mas largo que 500 caracteres
+    if not isinstance(args.get("comment"), str):
+        return {"error_message": "comment isn't a string!"}
+    if len(args.get("comment")) == 0:
+        return {"error_message": "comment can't be empty!"}
+    if len(args.get("comment")) > 500:
+        return {"error_message": "el comentario es demasiado largo, pasa los 500 caracteres"}
+
+    # restriccion 5: Un rating ha de ser un integer entre 0 y 5
+    try:
+        rating = int(args.get("rating"))
+    except ValueError:
+        return jsonify({"error_message": "rating isn't an integer"}), 400
+    if rating < 0 or rating > 5:
+        return {"error_message": f"el rating de la review ({rating}) ha de ser mas grande que 0 y menos que 5"}
+
+    # restriccion 6: el usuario ha de ser participante del evento (como eliminamos el participante despues de la review, no pueden estar duplicadas!)
+    participant = Participant.query.filter_by(
+        event_id=event_id, user_id=user_id).first()
+    if participant is None:
+        return jsonify({"error_message": f"El usuario {user_id} no es participante del evento {event_id}"}), 400
+
+    # restriccion 7: el creador del evento no puede dar una review a su propio evento
+    if user_id == event.user_creator:
+        return jsonify({"error_message": "El creador del evento no puede dar una review a su propio evento"}), 400
+
+    new_rating = Review(user_id=user_id, event_id=event_id,
+                        rating=rating, comment=args.get("comment"))
+
+    # Errores al guardar en la base de datos: FK violated, etc
+    try:
+        new_rating.save()
+    except sqlalchemy.exc.IntegrityError:
+        return jsonify({"error_message": "Integrity error, FK violated (algo no esta definido en la BD) o ya existe la review en la DB"}), 400
+    except:
+        return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
+
+    # Quitar el participante del evento
+    try:
+        participant.delete()
+    except sqlalchemy.exc.IntegrityError:
+        return jsonify({"error_message": "Integrity error, FK violated (algo no esta definido en la BD)"}), 400
+    except:
+        return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
+
+    # Devolver nueva review en formato JSON si todo ha funcionado correctamente
+    ratingJSON = new_rating.toJSON()
+    return jsonify(ratingJSON), 201
+
+
+# LISTAR TODAS LAS REVIEW DE UN EVENTO: crear una review de un evento
+@module_event_v3.route('/review', methods=['GET'])
+# DEVUELVE:
+# - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
+# - 200: Un objeto JSON con los atributos de la review creada
+@jwt_required(optional=False)
+def get_reviews_evento():
+    
+    try:
+        args = request.args
+    except:
+        return jsonify({"error_message": "Error loading args"}), 400
+
+    # restriccion: el evento tiene que estar en la URL, ser una UUID valida y ha de existir
+    try:
+        if args.get("eventid") is None:
+            return jsonify({"error_message": "the id of the event isn't in the URL as a query parameter with name eventid :("}), 400
+        else:
+            event_id = uuid.UUID(args.get("eventid"))
+    except:
+        return jsonify({"error_message": "eventid isn't a valid UUID"}), 400
+
+    event = Event.query.get(event_id)
+    if event is None:
+        return jsonify({"error_message": f"Event {event_id} doesn't exist"}), 400
+    
+    # TODO Quien puede acceder a estos datos? Creador solo o todos los usuarios?
+
+    try:
+        reviews = Review.query.filter_by(event_id=event_id)
+    except:
+        return jsonify({"error_message": "Error querying the reviews"}), 400
+    
+    review_list = []
+
+    for r in reviews:
+        review_list.append(r)
+
+    return jsonify([review.toJSON() for review in reviews]), 200
