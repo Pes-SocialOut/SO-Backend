@@ -517,7 +517,7 @@ def delete_event(id):
         return jsonify({"error_message": "error while deleting"}), 400
 
 
-# GET ALL EVENTOS method: retorna toda la informacion de todos los eventos de la database
+# GET ALL EVENTOS ACTIVOS method: retorna toda la informacion de todos los eventos activos de la database
 @module_event_v3.route('/', methods=['GET'])
 # RECIBE:
 # - GET HTTP request
@@ -590,9 +590,8 @@ def filter_by():
     except Exception as e:
         return jsonify({"error_message": "hello"}), 400
 
+
 # OBTENER LOS 10 EVENTOS CREAS MAS RECIENTEMENTE method: Retorna un conjunto con los 10 eventos mas recientes
-
-
 @module_event_v3.route('/lastten', methods=['GET'])
 @jwt_required(optional=False)
 def lastest_events():
@@ -653,7 +652,7 @@ def who_joined_event():
     return jsonify(participant_list), 200
 
 
-# LISTAR TODOS LOS EVENTOS PASADOS: crear una review de un evento
+# LISTAR TODOS LOS EVENTOS PASADOS DE UN USUARIO:
 @module_event_v3.route('/pastevents', methods=['GET'])
 # DEVUELVE:
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
@@ -665,7 +664,7 @@ def get_past_evento():
     except:
         return jsonify({"error_message": "Error loading args"}), 400
 
-    # restriccion: el evento tiene que estar en la URL, ser una UUID valida y ha de existir
+    # restriccion: el user id tiene que estar en la URL y ser una UUID valida
     try:
         if args.get("userid") is None:
             return jsonify({"error_message": "the id of the user isn't in the URL as a query parameter with name userid :("}), 400
@@ -673,13 +672,27 @@ def get_past_evento():
             user_id = uuid.UUID(args.get("userid"))
     except:
         return jsonify({"error_message": "eventid isn't a valid UUID"}), 400
-
-    events_of_participant = Participant.query.filter_by(user_id=user_id)
-    # if events_of_participant is None, it means that the user doesn't participate in any event
     
-    past_events = []        
+    # restriccion: el user ha de existir
+    try:
+        user = User.query.get(user_id)
+        if user is None:
+            return jsonify({"error_message": f"User {user_id} doesn't exist"}), 400
+    except:
+        return jsonify({"error_message": f"user {user} doesn't exist"}), 400
+
+    # restricion: solo el usuario creador puede eliminar su evento (mirando Bearer Token)
+    auth_id = get_jwt_identity()
+    if str(user_id) != auth_id:
+        return jsonify({"error_message": "A user cannot see the events that another user participated in"}), 403
+
+
+    # if events_of_participant is None, it means that the user doesn't participate in any event
+    events_of_participant = Participant.query.filter_by(user_id=user_id)
+    
     # La data de ahora es en GMT+2 por lo tanto tenemos que sumar dos horas en el tiempo actual
     current_date = datetime.now() + timedelta(hours=2)
+    past_events = []        
 
     for ev in events_of_participant:
         try:
