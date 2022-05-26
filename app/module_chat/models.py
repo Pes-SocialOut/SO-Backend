@@ -1,21 +1,7 @@
 # Librerias
-from flask import Flask
 from datetime import datetime, timedelta
-from flask_sqlalchemy import SQLAlchemy
-from flask_script import Manager
-from flask_migrate import Migrate, MigrateCommand
-from os import environ
-from dotenv import load_dotenv, find_dotenv
 from sqlalchemy.dialects.postgresql import UUID
-import uuid
 from app import db
-
-load_dotenv(find_dotenv())
-app = Flask(__name__)
-
-# Settings
-# app.config['SQLALCHEMY_DATABASE_URI'] = environ.get('DATABASE')
-# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 #Defueine the chat model
 class Chat(db.Model):
@@ -116,10 +102,5 @@ class Message(db.Model):
             "sender_id": self.sender_id,
             "chat_id": self.chat_id,
             "text": self.text,
-            "created_ad": self.created_at
+            "created_at": self.created_at
         }
-
-
-#if __name__ == "__main__":
-    #manager.run()
-

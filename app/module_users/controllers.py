@@ -17,7 +17,7 @@ import os
 
 # Import util functions
 from app.utils.email import send_email
-from app.module_users.utils import user_id_for_email, authentication_methods_for_user_id, send_verification_code_to, generate_tokens, get_random_salt, verify_password_strength
+from app.module_users.utils import increment_achievement_of_user, user_id_for_email, authentication_methods_for_user_id, send_verification_code_to, generate_tokens, get_random_salt, verify_password_strength
 
 # Import module models
 from app.module_users.models import User, SocialOutAuth, GoogleAuth, FacebookAuth, EmailVerificationPendant, Friend, UserLanguage
@@ -76,6 +76,9 @@ def update_profile(id):
     user = User.query.filter_by(id = uuid.UUID(id)).first()
     if (user == None):
         return jsonify({'error_message': f'User does not exist for id {id}'}), 404
+    
+    if (len(description) > 180):
+        return jsonify({'error_message': f'Description is too long. No more than 180 characters allowed.'}), 400
 
     user.username = username
     user.description = description
@@ -85,6 +88,9 @@ def update_profile(id):
         user.save()
     except:
         return jsonify({'error_message': f'An error occured when updating user {id}'}), 500
+    
+    if len(description) > 120:
+        increment_achievement_of_user('storyteller', user.id)
 
     user_languages = UserLanguage.query.filter_by(user = user.id).all()
     for ul in user_languages:
@@ -264,6 +270,9 @@ def register_socialout():
         return jsonify({'error_message': 'Verification code was never sent to this email or the code has expired.'}), 400
     if db_verification.code != verification:
         return jsonify({'error_message': 'Verification code does not coincide with code sent to email'}), 400
+    
+    if (len(description) > 180):
+        return jsonify({'error_message': f'Description is too long. No more than 180 characters allowed.'}), 400
 
     # Add user to bd
     user_id = uuid.uuid4()
@@ -284,6 +293,12 @@ def register_socialout():
     user_salt = get_random_salt(15)
     hashed_pw = hashing.hash_value(pw, salt=user_salt)
     socialout_auth = SocialOutAuth(user_id, user_salt, hashed_pw)
+
+    # Increment achievement
+    if len(description) > 120:
+        increment_achievement_of_user('storyteller', user_id)
+    increment_achievement_of_user('credential_multiverse', user_id)
+
     try:
         socialout_auth.save()
     except:
@@ -327,6 +342,9 @@ def register_google():
     # Check no other user exists with that email
     if user_id_for_email(email) != None:
         return jsonify({'error_message': 'User with this email already exists'}), 400
+    
+    if (len(description) > 180):
+        return jsonify({'error_message': f'Description is too long. No more than 180 characters allowed.'}), 400
 
     # Add user to bd
     user_id = uuid.uuid4()
@@ -345,6 +363,12 @@ def register_google():
     
     # Add google auth method to user
     google_auth = GoogleAuth(user_id, token)
+
+    # Increment achievement
+    if len(description) > 120:
+        increment_achievement_of_user('storyteller', user_id)
+    increment_achievement_of_user('credential_multiverse', user_id)
+
     try:
         google_auth.save()
     except:
@@ -385,6 +409,9 @@ def register_facebook():
     if user_id_for_email(email) != None:
         return jsonify({'error_message': 'User with this email already exists'}), 400
 
+    if (len(description) > 180):
+        return jsonify({'error_message': f'Description is too long. No more than 180 characters allowed.'}), 400
+
     # Add user to bd
     user_id = uuid.uuid4()
     user = User(user_id, username, email, description, hobbies)
@@ -402,6 +429,12 @@ def register_facebook():
     
     # Add facebook auth method to user
     facebook_auth = FacebookAuth(user_id, token)
+
+    # Increment achievement
+    if len(description) > 120:
+        increment_achievement_of_user('storyteller', user_id)
+    increment_achievement_of_user('credential_multiverse', user_id)
+
     try:
         facebook_auth.save()
     except:
@@ -590,6 +623,10 @@ def link_socialout_auth_method(args):
     user_salt = get_random_salt(15)
     hashed_pw = hashing.hash_value(password, salt=user_salt)
     socialout_auth = SocialOutAuth(user_id, user_salt, hashed_pw)
+
+    # Increment achievement
+    increment_achievement_of_user('credential_multiverse', user_id)
+
     try:
         socialout_auth.save()
     except:
@@ -624,6 +661,10 @@ def link_google_auth_method(args):
     
     # Add google auth method to user
     google_auth = GoogleAuth(user_id, token)
+
+    # Increment achievement
+    increment_achievement_of_user('credential_multiverse', user_id)
+
     try:
         google_auth.save()
     except:
@@ -654,6 +695,10 @@ def link_facebook_auth_method(args):
     
     # Add facebook auth method to user
     facebook_auth = FacebookAuth(user_id, token)
+
+    # Increment achievement
+    increment_achievement_of_user('credential_multiverse', user_id)
+
     try:
         facebook_auth.save()
     except:

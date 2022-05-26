@@ -9,7 +9,7 @@ from app import db
 
 # Import util functions
 from app.utils.email import send_email
-from app.module_users.utils import user_id_for_email, authentication_methods_for_user_id, send_verification_code_to, generate_tokens, get_random_salt, verify_password_strength
+from app.module_users.utils import increment_achievement_of_user, user_id_for_email, authentication_methods_for_user_id, send_verification_code_to, generate_tokens, get_random_salt, verify_password_strength
 
 # Import module models
 from app.module_users.models import FriendInvite, User, Achievement, AchievementProgress, Friend, UserLanguage, EmailVerificationPendant, SocialOutAuth
@@ -168,5 +168,9 @@ def accept_friend_link():
     
     friendship = Friend(invitation.invitee, auth_id)
     friendship.save()
+
+    # Increment achievement
+    increment_achievement_of_user('ambassador', invitation.invitee)
+
     invitation.delete()
     return get_profile(str(invitation.invitee))
