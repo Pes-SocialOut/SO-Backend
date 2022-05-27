@@ -1,17 +1,8 @@
 # Librerias
-from flask import Flask
 from datetime import datetime, timedelta
-from flask_sqlalchemy import SQLAlchemy
-from flask_script import Manager
-from flask_migrate import Migrate, MigrateCommand
-from os import environ
-from dotenv import load_dotenv, find_dotenv
+#from dotenv import load_dotenv, find_dotenv
 from sqlalchemy.dialects.postgresql import UUID
-import uuid
 from app import db
-
-load_dotenv(find_dotenv())
-app = Flask(__name__)
 
 # Settings
 # app.config['SQLALCHEMY_DATABASE_URI'] = environ.get('DATABASE')
