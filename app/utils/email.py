@@ -11,7 +11,11 @@ def send_email(email, subject, body):
     msg['From'] = EMAIL_ADRESS
     msg['To'] = email
     msg.set_content(body)
-
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-        smtp.login(EMAIL_ADRESS, EMAIL_PASSWORD)
-        smtp.send_message(msg)
+    
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(EMAIL_ADRESS, EMAIL_PASSWORD)
+            smtp.send_message(msg)
+    except:
+        return False
+    return True
