@@ -13,8 +13,6 @@ from app import db
 # Import the hashing object from the main app module
 from app import hashing
 
-import os
-
 # Import util functions
 from app.utils.email import send_email
 from app.module_users.utils import increment_achievement_of_user, user_id_for_email, authentication_methods_for_user_id, send_verification_code_to, generate_tokens, get_random_salt, verify_password_strength

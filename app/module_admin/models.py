@@ -24,6 +24,12 @@ class Admin(db.Model):
     def save(self):
         db.session.add(self)
         db.session.commit()
+    
+    @staticmethod
+    def exists(id):
+        if type(id) == str:
+            id = uuid.UUID(id)
+        return Admin.query.filter_by(id = id).first() != None
 
     def toJSON(self):
         return { 'id': self.id }
