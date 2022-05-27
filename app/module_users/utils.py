@@ -38,7 +38,9 @@ def send_verification_code_to(email):
         db_verification.code = code
         db_verification.expires_at = datetime.now(timezone.utc)+timedelta(minutes=15)
         db.session.commit()
-    send_email(email, 'SocialOut auth verification code', f'Your verification code for SocialOut authentication is {code}. It expires in 15 minutes.')
+    successful_email = send_email(email, 'SocialOut auth verification code', f'Your verification code for SocialOut authentication is {code}. It expires in 15 minutes.')
+    if not successful_email:
+        db_verification.delete()
 
 def generate_tokens(user_id):
     access_token = create_access_token(identity=user_id)
