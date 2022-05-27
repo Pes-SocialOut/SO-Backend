@@ -1,11 +1,12 @@
 # Import flask dependencies
 # Import module models (i.e. User)
+from cmath import exp
 import sqlalchemy
 from app.module_event.models import Event, Participant, Like, Review
 from app.module_users.models import User
 from profanityfilter import ProfanityFilter
 from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity, jwt_required
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import (Blueprint, request, jsonify)
 import uuid
 import validators
@@ -373,9 +374,9 @@ def leave_event(id):
 
     return jsonify({"message": f"el participante {user_id} ha abandonado CON EXITO"}), 200
 
+
+
 # PARTICIPACIONES DE UN USER: todos los eventos a los que un usuario se ha unido
-
-
 @module_event_v3.route('/joined/<id>', methods=['GET'])
 # RECIBE:
 # - GET HTTP request con la id del usuario que queremos solicitar
@@ -516,7 +517,7 @@ def delete_event(id):
         return jsonify({"error_message": "error while deleting"}), 400
 
 
-# GET ALL EVENTOS method: retorna toda la informacion de todos los eventos de la database
+# GET ALL EVENTOS ACTIVOS method: retorna toda la informacion de todos los eventos activos de la database
 @module_event_v3.route('/', methods=['GET'])
 # RECIBE:
 # - GET HTTP request
@@ -526,12 +527,14 @@ def delete_event(id):
 @jwt_required(optional=False)
 def get_all_events():
     try:
-        all_events = Event.get_all()
+        # La data de ahora es en GMT+2 por lo tanto tenemos que sumar dos horas en el tiempo actual
+        current_date = datetime.now() + timedelta(hours=2)
+        active_events = Event.query.filter(Event.date_end >= current_date)
     except:
         return jsonify({"error_message": "Error when querying events"}), 400
 
     try:
-        return jsonify([event.toJSON() for event in all_events]), 200
+        return jsonify([event.toJSON() for event in active_events]), 200
     except:
         return jsonify({"error_message": "Unexpected error when passing events to JSON format"}), 400
 
@@ -587,9 +590,8 @@ def filter_by():
     except Exception as e:
         return jsonify({"error_message": "hello"}), 400
 
+
 # OBTENER LOS 10 EVENTOS CREAS MAS RECIENTEMENTE method: Retorna un conjunto con los 10 eventos mas recientes
-
-
 @module_event_v3.route('/lastten', methods=['GET'])
 @jwt_required(optional=False)
 def lastest_events():
@@ -648,6 +650,64 @@ def who_joined_event():
         participant_list.append(p.user_id)
 
     return jsonify(participant_list), 200
+
+
+# LISTAR TODOS LOS EVENTOS PASADOS DE UN USUARIO:
+@module_event_v3.route('/pastevents', methods=['GET'])
+# DEVUELVE:
+# - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
+# - 200: Un objeto JSON con los atributos de la review creada
+@jwt_required(optional=False)
+def get_past_evento():
+    try:
+        args = request.args
+    except:
+        return jsonify({"error_message": "Error loading args"}), 400
+
+    # restriccion: el user id tiene que estar en la URL y ser una UUID valida
+    try:
+        if args.get("userid") is None:
+            return jsonify({"error_message": "the id of the user isn't in the URL as a query parameter with name userid :("}), 400
+        else:
+            user_id = uuid.UUID(args.get("userid"))
+    except:
+        return jsonify({"error_message": "eventid isn't a valid UUID"}), 400
+    
+    # restriccion: el user ha de existir
+    try:
+        user = User.query.get(user_id)
+        if user is None:
+            return jsonify({"error_message": f"User {user_id} doesn't exist"}), 400
+    except:
+        return jsonify({"error_message": f"user {user} doesn't exist"}), 400
+
+    # restricion: solo el usuario creador puede eliminar su evento (mirando Bearer Token)
+    auth_id = get_jwt_identity()
+    if str(user_id) != auth_id:
+        return jsonify({"error_message": "A user cannot see the events that another user participated in"}), 403
+
+
+    # if events_of_participant is None, it means that the user doesn't participate in any event
+    events_of_participant = Participant.query.filter_by(user_id=user_id)
+    
+    # La data de ahora es en GMT+2 por lo tanto tenemos que sumar dos horas en el tiempo actual
+    current_date = datetime.now() + timedelta(hours=2)
+    past_events = []        
+
+    for ev in events_of_participant:
+        try:
+            the_event = Event.query.get(ev.event_id)
+            if the_event.date_end <= current_date:
+                past_events.append(the_event)
+        except:
+            return jsonify({"error_message": "Error when querying events"}), 400
+
+    try:
+        return jsonify([event.toJSON() for event in past_events]), 200
+    except:
+        return jsonify({"error_message": "Unexpected error when passing events to JSON format"}), 400
+
+
 
 
 ########################################################################### O T R O S ########################################################
@@ -981,8 +1041,7 @@ def crear_review():
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
 # - 200: Un objeto JSON con los atributos de la review creada
 @jwt_required(optional=False)
-def get_reviews_evento():
-    
+def get_reviews_evento():  
     try:
         args = request.args
     except:
