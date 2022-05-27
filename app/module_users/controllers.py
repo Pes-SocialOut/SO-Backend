@@ -20,7 +20,7 @@ from app.utils.email import send_email
 from app.module_users.utils import increment_achievement_of_user, user_id_for_email, authentication_methods_for_user_id, send_verification_code_to, generate_tokens, get_random_salt, verify_password_strength
 
 # Import module models
-from app.module_users.models import User, SocialOutAuth, GoogleAuth, FacebookAuth, EmailVerificationPendant, Friend, UserLanguage
+from app.module_users.models import User, SocialOutAuth, GoogleAuth, FacebookAuth, EmailVerificationPendant, Friend, UserLanguage, BannedEmails
 
 # Define the blueprint: 'users', set its url prefix: app.url/users
 module_users_v1 = Blueprint('users', __name__, url_prefix='/v1/users')
@@ -177,6 +177,8 @@ def check_register_status_socialout(args):
     if 'email' not in args:
         return jsonify({'error_message': 'Socialout auth method must indicate an email'}), 400
     email = args['email']
+    if BannedEmails.exists(email):
+        return jsonify({'error_message': 'This email is banned'}), 409
     user_id = user_id_for_email(email)
     if user_id == None:
         send_verification_code_to(email)
@@ -199,6 +201,8 @@ def check_register_status_google(args):
         email = idinfo.json()['email']
     except:
         return jsonify({'error_message': 'Google token was invalid'}), 400
+    if BannedEmails.exists(email):
+        return jsonify({'error_message': 'This email is banned'}), 409
     user_id = user_id_for_email(email)
     if user_id == None:
         return jsonify({'action': 'continue'}), 200
@@ -218,6 +222,8 @@ def check_register_status_facebook(args):
         email = idinfo.json()['email']
     except:
         return jsonify({'error_message': 'Facebook token was invalid'}), 400
+    if BannedEmails.exists(email):
+        return jsonify({'error_message': 'This email is banned'}), 409
     user_id = user_id_for_email(email)
     if user_id == None:
         return jsonify({'action': 'continue'}), 200
@@ -255,6 +261,9 @@ def register_socialout():
     
     if len(languages) == 0 or any([l not in ['catalan', 'spanish', 'english'] for l in languages]):
         return jsonify({'error_message': 'Languages must be a subset of the following: {catalan, spanish, english}'}), 400
+
+    if BannedEmails.exists(email):
+        return jsonify({'error_message': 'This email is banned'}), 409
 
     # Check no other user exists with that email
     if user_id_for_email(email) != None:
@@ -339,6 +348,9 @@ def register_google():
     except:
         return jsonify({'error_message': 'Google token was invalid'}), 400
     
+    if BannedEmails.exists(email):
+        return jsonify({'error_message': 'This email is banned'}), 409
+    
     # Check no other user exists with that email
     if user_id_for_email(email) != None:
         return jsonify({'error_message': 'User with this email already exists'}), 400
@@ -404,6 +416,9 @@ def register_facebook():
         email = idinfo.json()['email']
     except:
         return jsonify({'error_message': 'Google token was invalid'}), 400
+    
+    if BannedEmails.exists(email):
+        return jsonify({'error_message': 'This email is banned'}), 409
     
     # Check no other user exists with that email
     if user_id_for_email(email) != None:

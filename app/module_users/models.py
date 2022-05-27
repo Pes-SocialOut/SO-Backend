@@ -329,3 +329,34 @@ class UserLanguage(db.Model):
     def save(self):
         db.session.add(self)
         db.session.commit()
+
+class BannedEmails(db.Model):
+    __tablename__ = 'banned_emails'
+
+    email = db.Column(db.String, primary_key=True)
+    username = db.Column(db.String, nullable=False)
+    date = db.Column(db.DateTime, nullable=False)
+    reason = db.Column(db.String)
+
+    def __init__(self, email, username, date, reason):
+        self.email = email
+        self.username = username
+        self.date = date
+        self.reason = reason
+    
+    def __repr__(self):
+        return f'BannedEmail({self.email}, {self.username}, {self.date}, {self.reason})'
+    
+    # To DELETE a row from the table
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+    
+    # To SAVE a row from the table
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+    
+    @staticmethod
+    def exists(email):
+        return BannedEmails.query.filter_by(email = email).first() != None
