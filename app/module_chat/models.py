@@ -20,13 +20,13 @@ class Chat(db.Model):
     id = db.Column(UUID(as_uuid = True), primary_key = True)
 
     #id del event
-    event_id = db.Column(UUID(as_uuid = True), nullable = False)
+    event_id = db.Column(UUID(as_uuid = True), db.ForeignKey('events.id'), nullable = False)
 
     #id del creador del event
-    creador_id = db.Column(UUID(as_uuid = True), nullable = False)
+    creador_id = db.Column(UUID(as_uuid = True), db.ForeignKey('users.id'), nullable = False)
 
     #id del usuari participant
-    participant_id = db.Column(UUID(as_uuid = True), nullable = False)
+    participant_id = db.Column(UUID(as_uuid = True), db.ForeignKey('users.id'), nullable = False)
 
     #To create a instance of a Chat
     def __init__(self, id, event_id, creador_id, participant_id):
@@ -68,7 +68,7 @@ class Message(db.Model):
     id = db.Column(UUID(as_uuid = True), primary_key=True)
 
     #id del usuari que ho envia
-    sender_id = db.Column(UUID(as_uuid=True) , nullable = False)   
+    sender_id = db.Column(UUID(as_uuid=True) , db.ForeignKey('users.id') , nullable = False)   
 
     #id del chat al que pertany
     chat_id = db.Column(UUID(as_uuid=True) , db.ForeignKey('chat.id') , nullable=False)
