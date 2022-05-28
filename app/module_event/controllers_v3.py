@@ -508,13 +508,23 @@ def delete_event(id):
         except:
             return jsonify({"error_message": "error while deleting likes of an event"}), 400
 
-    # TODO Eliminar las reviews de un evento ANTES DE ELIMINAR EL EVENTO
+   # Eliminar las reviews de un evento ANTES DE ELIMINAR EL EVENTO
+    try:
+        reviews = Review.query.filter_by(event_id=event_id).all()
+    except:
+        return jsonify({"error_message": "error while querying likes of an event"}), 400
+
+    for r in reviews:
+        try:
+            r.delete()
+        except:
+            return jsonify({"error_message": "error while deleting reviews of an event"}), 400
 
     try:
         event.delete()
         return jsonify({"error_message": "Successful DELETE"}), 202
     except:
-        return jsonify({"error_message": "error while deleting"}), 400
+        return jsonify({"error_message": "error while deleting the event"}), 400
 
 
 # GET ALL EVENTOS ACTIVOS method: retorna toda la informacion de todos los eventos activos de la database
@@ -523,7 +533,7 @@ def delete_event(id):
 # - GET HTTP request
 # DEVUELVE:
 # - 400: Un objeto JSON con los posibles mensajes de error
-# - 201: Un objeto JSON con todos los eventos que hay en el sistema
+# - 201: Un objeto JSON con todos los eventos activos que hay en el sistema
 @jwt_required(optional=False)
 def get_all_events():
     try:
