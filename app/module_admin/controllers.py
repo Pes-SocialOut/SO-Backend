@@ -37,9 +37,9 @@ def access():
 def get_reported_events():
     
     # Ver si el token es de un admin
-    # auth_id = get_jwt_identity()
-    # if not isAdmin(auth_id):
-    #     return jsonify({"error_message": "You're not an admin ;)"}), 400
+    auth_id = get_jwt_identity()
+    if not Admin.exists(auth_id):
+        return jsonify({"error_message": "You're not an admin ;)"}), 400
 
     db_uri = current_app.config.get('SQLALCHEMY_DATABASE_URI')
     engine = create_engine(db_uri)
@@ -47,25 +47,21 @@ def get_reported_events():
     with engine.connect() as conn:
         result_as_list = conn.execute(sql_query).fetchall()    
     
-    data = []
+    data_events = []
     for result in result_as_list:
-        data.append(dataToJSON(result))
+        data_events.append(dataToJSON(result))
     
-    return jsonify(data), 200
-#    return str(sql_query), 200
-    
-    #Event.query(Event.user_creator, Event.id, Event.name, Event.date_started, Event.date_end, Event.max_participants, ).join(Review, Review.event_id == Event.id, isouter=True).filter(Review.rating == 0).group_by()
+    for u1 in data_events:
+        events_of_a_user = []
+        event_user = [u1["user_id"], u1["user_username"]]
+        for u2 in data_events:
+            if u1["user_id"] == u2["user_id"]:
+                events_of_a_user.append(u2["reported_event"])
+        
+    definitive = eventJSON(event_user, events_of_a_user)
 
-    # queremos, por cada usuario, todos sus eventos reportados POR ORDEN DE CUAL HA SIDO MAS REPORTADO
+    return jsonify(definitive), 200
 
-    # podemos hacer un join de evento y reviews (por id de evento, event_id de review) para conseguir los eventos con reviews = 0
-    #
-    # SELECT events.user_creator, events.id, events.name, events.date_started , events.date_end, events.max_participants, COUNT(*) AS num_reports
-    # FROM events
-    # LEFT JOIN review ON events.id = review.event_id
-    # WHERE review.rating = 0
-    # GROUP BY events.user_creator, events.id, events.name, events.date_started , events.date_end, events.max_participants
-    # ORDER by num_reports DESC;
 
 def dataToJSON(data):
     return {
@@ -79,4 +75,11 @@ def dataToJSON(data):
             "event_max_participants": data[6],
             "event_num_reports": data[7],
         }
+    }
+
+def eventJSON(data, events):
+    return {
+        "id": data[0],
+        "username": data[1],
+        "reported_event": events
     }
