@@ -22,22 +22,22 @@ def create_chat():
     try:
         args = request.json
     except: 
-        return jsonify({"error message": "The JSON argument is bad defined"})
+        return jsonify({"error_message": "The JSON argument is bad defined"})
 
     if args.get("event_id") is None:
-        return  jsonify({"error message": "Event if is not defined or its value is null"}), 400
+        return  jsonify({"error_message": "Event if is not defined or its value is null"}), 400
     if args.get("participant_id") is None:
-        return jsonify({"error message": "Participant id is not defined or its value is null"}), 400
+        return jsonify({"error_message": "Participant id is not defined or its value is null"}), 400
     
     try:
         event_id = uuid.UUID(args.get("event_id"))
     except:
-        return jsonify({"error message": "The event id is not a valid uuid"}), 400
+        return jsonify({"error_message": "The event id is not a valid uuid"}), 400
 
     try:
         participant_id = uuid.UUID(args.get("participant_id"))
     except:
-        return jsonify({"error message": "The participant id is not a valid uuid"}), 400
+        return jsonify({"error_message": "The participant id is not a valid uuid"}), 400
 
     return crear_chat_back(event_id, participant_id)
 
@@ -51,14 +51,14 @@ def crear_chat_back(event_id, participant_id):
         event_chat = Event.query.filter_by(id = event_id).first()
         creador_id = event_chat.user_creator
     except: 
-        return  jsonify({"error message": "Problemas al encontrar al creador del evento"}), 400
+        return  jsonify({"error_message": "Problemas al encontrar al creador del evento"}), 400
 
     New_Chat = Chat(id, event_id, creador_id, participant_id)
 
     try:
         New_Chat.save()
     except sqlalchemy.exc.IntegrityError:
-       return jsonify({"error message": "FK problems, the user or the event doesn't exists"}), 400
+       return jsonify({"error_message": "FK problems, the user or the event doesn't exists"}), 400
     except:
         return jsonify({"error_message": "Something happened in the insert"}), 400
     
@@ -82,38 +82,38 @@ def create_message():
     try: 
         args = request.json
     except:
-        return jsonify({"error message": "The JSON argument is bad defined"}), 400
+        return jsonify({"error_message": "The JSON argument is bad defined"}), 400
 
     if args.get("participant_id") is None:
-        return jsonify({"error message": "Sender Id is not defined or its value is null"}), 400
+        return jsonify({"error_message": "Sender Id is not defined or its value is null"}), 400
     if args.get("event_id") is None:
-        return jsonify({"error message": "Chat Id is not defined or its value is null"}), 400
+        return jsonify({"error_message": "Chat Id is not defined or its value is null"}), 400
     if args.get("text") is None:
-        return jsonify({"error message": "Text is not defined or its value is null"}), 400
+        return jsonify({"error_message": "Text is not defined or its value is null"}), 400
     if not isinstance(args.get("text"), str):
         return jsonify({"error_message": "The text is not a string"}), 400
 
     try:
         Participant_id = uuid.UUID(args.get("participant_id"))
     except:
-        return jsonify({"error message": "The participant id not is a valid uuid"})
+        return jsonify({"error_message": "The participant id not is a valid uuid"})
     
     try:
         Event_id = uuid.UUID(args.get("event_id"))
     except:
-        return jsonify({"error message": "The event id not is a valid uuid"})
+        return jsonify({"error_message": "The event id not is a valid uuid"})
 
     try:
         Chat_buscat= Chat.query.filter_by(participant_id = Participant_id, event_id = Event_id).first()
     except:
-        return jsonify({"error message": "El chat solicitado no existe"}), 400
+        return jsonify({"error_message": "El chat solicitado no existe"}), 400
 
     if Chat_buscat is None:
-        return jsonify({"error message": "No hay ningun chat con esas credenciales"}), 400
+        return jsonify({"error_message": "No hay ningun chat con esas credenciales"}), 400
 
     if auth_id != Chat_buscat.participant_id:
         if auth_id != Chat_buscat.creador_id:
-            return jsonify({"error message": "Un usuario no perteneciente a un chat no puede solicitarlo"}) 
+            return jsonify({"error_message": "Un usuario no perteneciente a un chat no puede solicitarlo"}) 
 
     id = uuid.uuid4()
 
@@ -122,7 +122,7 @@ def create_message():
     try: 
         Message_new.save()
     except sqlalchemy.exc.IntegrityError:
-        return jsonify({"error message": "FK problems, the user or the event doesn't exists"}), 400
+        return jsonify({"error_message": "FK problems, the user or the event doesn't exists"}), 400
     except:
         return jsonify({"error_message": "Something happened in the insert"}), 400
 
@@ -138,19 +138,14 @@ def create_message():
     # -400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
     # -202: Un objeto JSON confirmando que se han borrado los debidos messages
 def delete_chats(id):
-
     try:
         usuari_esborrar = uuid.UUID(id)
     except: 
-        return jsonify({"error message": "The user id isn't a valid UUID" }), 400
+        return jsonify({"error_message": "The user id isn't a valid UUID" }), 400
 
     return borrar_mensajes_usuario(usuari_esborrar)
 
-
-
-
 def borrar_mensajes_usuario(usuari_esborrar):
-    
     try:
         A_borrar_p = Chat.query.filter_by(participant_id = usuari_esborrar)
         A_borrar_c = Chat.query.filter_by(creador_id = usuari_esborrar)   
@@ -167,9 +162,9 @@ def borrar_mensajes_usuario(usuari_esborrar):
         for Chat_borrar in A_borrar_c:
             Chat_borrar.delete()
     except:
-        return jsonify({"error message": "Falla el eliminar los chats"}), 400
+        return jsonify({"error_message": "Falla el eliminar los chats"}), 400
 
-    return jsonify({"message":f"The messages from this user have been succesfully deleted"}), 201
+    return jsonify({"message":f"The messages from this user have been succesfully deleted"}), 202
 
     
 # GET method: get all chats from a user as creator
@@ -184,12 +179,12 @@ def get_user_creations(id):
     try: 
         user_id = uuid.UUID(id)
     except:
-        return jsonify({"error message": "The user id isn't a valid uuid"}), 400
+        return jsonify({"error_message": "The user id isn't a valid uuid"}), 400
 
     try:
         chats_creador = Chat.query.filter_by(creador_id = user_id)
     except:
-        return jsonify({"error message": "Chat no exist"}), 400
+        return jsonify({"error_message": "Chat no exist"}), 400
 
     return jsonify([chat.toJSON() for chat in chats_creador]), 200
     
@@ -216,18 +211,18 @@ def open_session():
     try:
         Chat_buscat= Chat.query.filter_by(participant_id = Participant_id, event_id = Event_id).first()
     except:
-        return jsonify({"error message": "El chat solicitado no existe"}), 400
+        return jsonify({"error_message": "El chat solicitado no existe"}), 400
 
     if Chat_buscat is None:
-        return jsonify({"error message": "No hay ningun chat con esas credenciales"}), 400
+        return jsonify({"error_message": "No hay ningun chat con esas credenciales"}), 400
 
     if auth_id != Chat_buscat.participant_id:
         if auth_id != Chat_buscat.creador_id:
-            return jsonify({"error message": "Un usuario no perteneciente a un chat no puede solicitarlo"}) 
+            return jsonify({"error_message": "Un usuario no perteneciente a un chat no puede solicitarlo"}) 
 
     try:
         messages = Message.query.filter_by(chat_id = Chat_buscat.id)
     except:
-        return jsonify({"error message": "Algo ha pasado buscando los mensajes"}), 400
+        return jsonify({"error_message": "Algo ha pasado buscando los mensajes"}), 400
 
     return jsonify([Resultats.toJSON() for Resultats in messages]), 200
