@@ -7,8 +7,11 @@ from flask_jwt_extended import JWTManager
 # Import hashing
 from flask_hashing import Hashing
 
+from flask_cors import CORS
+
 # Define the WSGI application object
 app = Flask(__name__, static_url_path='/')
+CORS(app, resources=r'*', origins=r'*', supports_credentials=True)
 
 # Configurations
 app.config.from_object('config')
