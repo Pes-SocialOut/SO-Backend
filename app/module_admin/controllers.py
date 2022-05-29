@@ -129,7 +129,9 @@ def ban():
                 participant_user = User.query.filter_by(id = participant.user_id).first()
                 if participant_user.id != banned_user.id:
                     send_email(participant_user.email, 'Event cacellation!', f'We are sorry to inform you that the event titled "{event.name}" that was scheduled for {event_date_str} has been cacelled.\n\nYours sincerely,\nThe SocialOut team.')
-        delete_event(str(event.id))
+        _, status = delete_event(str(event.id))
+        if status != 202:
+            return jsonify({'error_message': 'Events cannot be successfully deleted.'}), 500
     
     # Notificar baneo a usuario
     email_body = 'Due to an accumulation of bad reviews that have been determined to be sufficient to take action we feel obligated to ban you from the SocialOut platform.\n'
