@@ -100,4 +100,4 @@ def main(db_uri):
             return
 
 if __name__ == '__main__':
-    main(os.getenv("SQLALCHEMY_DATABASE_URI"))
+    main(os.getenv("SQLALCHEMY_DATABASE_URL"))

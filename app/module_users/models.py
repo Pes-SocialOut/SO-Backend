@@ -159,20 +159,23 @@ class Achievement(db.Model):
     __tablename__ = 'achievements'
 
     # Achievement id
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4())
+    id = db.Column(db.String, primary_key=True)
+    # Title
+    title = db.Column(db.String, nullable=False)
     # Description
     description = db.Column(db.String, nullable=False)
     # Number of stages to be completed
     stages = db.Column(db.Integer, nullable=False, default=1)
 
     # To CREATE an instance of a Achievement
-    def __init__(self, id, description, stages):
+    def __init__(self, id, title, description, stages):
         self.id = id
+        self.title = title
         self.description = description
         self.stages = stages
 
     def __repr__(self):
-        return f'Achievement({self.id}, {self.description}, {self.stages})'
+        return f'Achievement({self.id}, {self.title}, {self.description}, {self.stages})'
 
     # To DELETE a row from the table
     def delete(self):
@@ -183,6 +186,26 @@ class Achievement(db.Model):
     def save(self):
         db.session.add(self)
         db.session.commit()
+    
+    @staticmethod
+    def getAchievementsOfUserId(id):
+        achievement_list = []
+        query_result = db.session.query(Achievement, AchievementProgress) \
+            .join(AchievementProgress, Achievement.id == AchievementProgress.achievement) \
+            .filter(AchievementProgress.user == id) \
+            .all()
+        for achievement, progress in query_result:
+            achievement_item = {
+                'id': achievement.id,
+                'title': achievement.title,
+                'description': achievement.description,
+                'stages': achievement.stages,
+                'progress': progress.progress,
+            }
+            if progress.progress == achievement.stages:
+                achievement_item['completed_at'] = progress.completed_at
+            achievement_list.append(achievement_item)
+        return achievement_list
 
 class AchievementProgress(db.Model):
     __tablename__ = 'achievement_progress'
@@ -190,7 +213,7 @@ class AchievementProgress(db.Model):
     # User id
     user = db.Column(UUID(as_uuid=True), db.ForeignKey(User.id), primary_key=True, default=uuid.uuid4())
     # Achievement id
-    achievement = db.Column(UUID(as_uuid=True), db.ForeignKey(Achievement.id), primary_key=True, default=uuid.uuid4())
+    achievement = db.Column(db.String, db.ForeignKey(Achievement.id), primary_key=True)
     # Progreso
     progress = db.Column(db.Integer, nullable=False, default=0)
     # Fecha completado
@@ -257,9 +280,9 @@ class Friend(db.Model):
 class FriendInvite(db.Model):
     __tablename__ = 'friend_invites'
 
-    invitee = db.Column(UUID(as_uuid=True), db.ForeignKey(User.id), primary_key=True, default=uuid.uuid4())
-    code = db.Column(db.Integer, nullable=False)
-    expires_at = db.Column(db.DateTime)
+    invitee = db.Column(UUID(as_uuid=True), db.ForeignKey(User.id), default=uuid.uuid4(), nullable=False)
+    code = db.Column(db.String, primary_key=True)
+    expires_at = db.Column(db.DateTime, nullable=False)
 
     def __init__(self, invitee, code, expires_at):
         self.invitee = invitee
@@ -306,3 +329,42 @@ class UserLanguage(db.Model):
     def save(self):
         db.session.add(self)
         db.session.commit()
+
+class BannedEmails(db.Model):
+    __tablename__ = 'banned_emails'
+
+    email = db.Column(db.String, primary_key=True)
+    username = db.Column(db.String, nullable=False)
+    date = db.Column(db.DateTime, nullable=False)
+    reason = db.Column(db.String)
+
+    def __init__(self, email, username, date, reason):
+        self.email = email
+        self.username = username
+        self.date = date
+        self.reason = reason
+    
+    def __repr__(self):
+        return f'BannedEmail({self.email}, {self.username}, {self.date}, {self.reason})'
+    
+    # To DELETE a row from the table
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+    
+    # To SAVE a row from the table
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+    
+    @staticmethod
+    def exists(email):
+        return BannedEmails.query.filter_by(email = email).first() != None
+    
+    def toJSON(self):
+        return {
+            'email': self.email,
+            'username': self.username,
+            'date': self.date,
+            'reason': self.reason
+        }

@@ -52,16 +52,17 @@ def get_all_air_stations_id_name_location_pollution():
 
 
 @module_airservice_v1.route('/location', methods=['GET'])
-def general_quality_at_a_point():
+def general_quality_at_a_point_aux():
     if not (request.args.get('long') and request.args.get('lat')):
         return jsonify({"error_message":"Must contain a point defined by query parameters <long> and <lat>"}), 400
-    
     try:
         long = float(request.args.get('long'))
         lat = float(request.args.get('lat'))
     except ValueError:
         return jsonify({"error_message":"<long> and <lat> query parameters must be of type float"}), 400
+    return general_quality_at_a_point(long, lat)
 
+def general_quality_at_a_point(long, lat):
     try:
         tri_query_result = triangulation_cache.query.first()
         triangulation_data = pkl.loads(tri_query_result.tri_object_bytes)
