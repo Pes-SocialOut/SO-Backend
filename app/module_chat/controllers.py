@@ -1,11 +1,14 @@
 # Import Flask dependences
 # Import module models
 import sqlalchemy 
+from flask_socketio import socketio
 from app.module_chat.models import Message, Chat
 from app.module_event.models import Event
 from flask_jwt_extended import get_jwt_identity, jwt_required
 import uuid
 from flask import Blueprint, jsonify, request
+
+sio = socketio.Server()
 
 # Define the blueprint: 'Message', set its url prefix: app.url/message
 module_chat_v1 = Blueprint('chat', __name__, url_prefix= '/v1/chat')
@@ -126,6 +129,8 @@ def create_message():
     except:
         return jsonify({"error_message": "Something happened in the insert"}), 400
 
+    my_message(Chat_buscat.id, Message_new)
+
     return jsonify([Message_new.toJSON()]), 201
 
     
@@ -205,13 +210,13 @@ def open_session():
 
     auth_id = uuid.UUID(get_jwt_identity())
 
-    if 'participant_id' not in request.json:
+    if 'participant_id' not in request.args:
         return jsonify({'error_message': 'Participant id attribute missing in json'}), 400
-    if 'event_id' not in request.json:
+    if 'event_id' not in request.args:
         return jsonify({'error_message': 'Event id attribute missing in json'}), 400
 
-    Participant_id = request.json['participant_id']
-    Event_id = request.json['event_id']
+    Participant_id = request.args['participant_id']
+    Event_id = request.args['event_id']
   
     try:
         Chat_buscat= Chat.query.filter_by(participant_id = Participant_id, event_id = Event_id).first()
@@ -230,4 +235,18 @@ def open_session():
     except:
         return jsonify({"error message": "Algo ha pasado buscando los mensajes"}), 400
 
+    begin_chat(str(Chat_buscat.id))
+
     return jsonify([Resultats.toJSON() for Resultats in messages]), 200
+
+@sio.event
+def begin_chat(sid):
+    sio.enter_room(sid, 'chat_users')
+
+@sio.event
+def exit_chat(sid):
+    sio.leave_room(sid, 'chat_users')
+
+@sio.event
+def my_message(sid, data):
+    sio.emit('my reply', data, room='chat_users', skip_sid=sid)
