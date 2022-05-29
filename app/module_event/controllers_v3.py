@@ -1,16 +1,19 @@
 # Import flask dependencies
 # Import module models (i.e. User)
-from cmath import exp
 import sqlalchemy
 from app.module_event.models import Event, Participant, Like, Review
 from app.module_users.models import User
+from app.module_airservice.controllers import general_quality_at_a_point
+from app.module_users.utils import increment_achievement_of_user
+
 from profanityfilter import ProfanityFilter
-from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity, jwt_required
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 from flask import (Blueprint, request, jsonify, current_app)
 import uuid
 import validators
+import json
 
 # Import the database object from the main app module
 from app import db
@@ -34,8 +37,6 @@ max_latitude_catalunya = 42.85
 # Devuelve:
 # - 400: Un objeto JSON con un mensaje de error
 # - 201: Un objeto JSON con todos los parametros del evento creado (con la id incluida)
-
-
 @module_event_v3.route('/', methods=['POST'])
 @jwt_required(optional=False)
 def create_event():
@@ -268,8 +269,6 @@ def join_event(id):
     if event is None:
         return jsonify({"error_message": f"El evento {event_id} no existe en la BD"}), 400
 
-    # TODO Mirar si el user puede unirse al evento (tema banear)
-
     try:
         args = request.json
     except:
@@ -309,7 +308,15 @@ def join_event(id):
     except:
         return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
 
-    return jsonify({"message": f"el usuario {user_id} se han unido CON EXITO"}), 200
+    # Si es un evento con contaminacion baja, se añade uno al achievement Social bug
+    cont_level, cont_status = general_quality_at_a_point(event.longitud, event.latitude)
+    if cont_status == 200:
+        # Si es un evento con poca contaminacion, suma achievement Social Bug
+        contaminacion = json.loads(cont_level.response[0])
+        if contaminacion["pollution"] < 0.15:
+            increment_achievement_of_user("social_bug",user_id)
+
+    return jsonify({"message": f"el usuario se han unido CON EXITO"}), 200
 
 
 # ABANDONAR EVENTO: Usuario abandona a un evento
@@ -424,9 +431,22 @@ def get_event(id):
 
     try:
         event = Event.query.get(event_id)
-        return jsonify(event.toJSON()), 200
     except:
         return jsonify({"error_message": f"The event {event_id} doesn't exist"}), 400
+
+    # Si es un evento con contaminacion baja, se añade uno al achievement Healthy Curiosity
+    cont_level, cont_status = general_quality_at_a_point(event.longitud, event.latitude)
+    if cont_status == 200:
+        # Si es un evento con poca contaminacion, suma achievement Social Bug
+        contaminacion = json.loads(cont_level.response[0])
+        if contaminacion["pollution"] < 0.15:
+            auth_id = get_jwt_identity()
+            try:
+                increment_achievement_of_user("healthy_curiosity", auth_id)
+            except:
+                return jsonify({"error_message": f"Error adding an achievement"}), 400
+
+    return jsonify(event.toJSON()), 200
 
 
 # OBTENER EVENTOS POR USUARIO CREADOR method: devuelve todos los eventos creados por un usuario
