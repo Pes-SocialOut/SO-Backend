@@ -456,7 +456,14 @@ def get_creations():
 
     try:
         events_creats = Event.query.filter_by(user_creator=user_id)
-        return jsonify([event.toJSON() for event in events_creats]), 200
+        current_date = datetime.now() + timedelta(hours=2)
+        active_events = []
+         # Solo añadir los eventos ACTIVOS
+        for event in events_creats:
+            if event.date_end >= current_date:
+                active_events.append(event)
+        
+        return jsonify([event.toJSON() for event in active_events]), 200
     except:
         return jsonify({"error_message": "An unexpected error ocurred"}), 400
 
@@ -857,8 +864,12 @@ def get_likes_by_user(iduser):
         return jsonify({"error_message": "Error when querying likes"}), 400
     try:
         events = []
+        current_date = datetime.now() + timedelta(hours=2)
         for i in likes_user:
-            events.append(Event.query.get(i.event_id))
+            the_event = Event.query.get(i.event_id)
+            # Solo añadir los eventos ACTIVOS
+            if the_event.date_end >= current_date:
+                events.append(the_event)
         return jsonify([event.toJSON() for event in events]), 200
     except:
         return jsonify({"error_message": "Unexpected error"}), 400
