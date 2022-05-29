@@ -1089,6 +1089,8 @@ def get_reviews_evento():
     if event is None:
         return jsonify({"error_message": f"Event {event_id} doesn't exist"}), 400
     
+    user = User.query.filter_by(id = event.user_creator).first()
+    
     try:
         reviews = Review.query.filter_by(event_id=event_id)
     except:
@@ -1099,4 +1101,4 @@ def get_reviews_evento():
     for r in reviews:
         review_list.append(r)
 
-    return jsonify([review.toJSON() for review in reviews]), 200
+    return jsonify({'event': event.toJSON(), 'username': user.username, 'email': user.email, 'reviews': [review.toJSON() for review in reviews]}), 200
