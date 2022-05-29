@@ -43,6 +43,7 @@ max_latitude_catalunya = 42.85
 def create_event():
     try:
         args = request.json
+        args.noauth_local_webserver = True
     except:
         return jsonify({"error_message": "Mira el JSON body de la request, hay un atributo mal definido!"}), 400
 
