@@ -200,13 +200,13 @@ def open_session():
 
     auth_id = uuid.UUID(get_jwt_identity())
 
-    if 'participant_id' not in request.json:
+    if 'participant_id' not in request.args:
         return jsonify({'error_message': 'Participant id attribute missing in json'}), 400
-    if 'event_id' not in request.json:
+    if 'event_id' not in request.args:
         return jsonify({'error_message': 'Event id attribute missing in json'}), 400
 
-    Participant_id = request.json['participant_id']
-    Event_id = request.json['event_id']
+    Participant_id = request.args['participant_id']
+    Event_id = request.args['event_id']
   
     try:
         Chat_buscat= Chat.query.filter_by(participant_id = Participant_id, event_id = Event_id).first()
