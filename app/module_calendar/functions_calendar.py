@@ -47,12 +47,12 @@ def main():
 if __name__ == '__main__':
    main()
 
-def eliminarEventoID(eventID):
-    service = get_calendar_service()
+def eliminarEventoID(tokenUser, eventID):
+    service = get_calendar_service(tokenUser)
     service.events().delete(calendarId='primary', eventId= eventID ).execute()
 
-def eliminarEventoTitle(title):
-    service = get_calendar_service()
+def eliminarEventoTitle(tokenUser, title):
+    service = get_calendar_service(tokenUser)
     events = service.events().list(calendarId='primary', singleEvents=True, q="Pruebitax2 Dia").execute()
     for event in events['items']:
         eliminarEventoID(event['id'])
@@ -60,8 +60,8 @@ def eliminarEventoTitle(title):
         print("No hay eventos con este titulo")
 
 
-def buscarEventoTitle(title):
-    service = get_calendar_service()
+def buscarEventoTitle(tokenUser, title):
+    service = get_calendar_service(tokenUser)
     events = service.events().list(calendarId='primary', singleEvents=True, q=title).execute()
     for event in events['items']:
         print( event['summary'])
@@ -74,9 +74,9 @@ def buscarEventoTitle(title):
     return events
 
 
-def crearEvento(title, description, latitude, longitude, startDateTime, endDateTime):
+def crearEvento(tokenUser, title, description, latitude, longitude, startDateTime, endDateTime):
 
-    service = get_calendar_service()
+    service = get_calendar_service(tokenUser)
     location = obtenerLocation(latitude, longitude)
     event = {
     'summary': title,
@@ -126,8 +126,8 @@ def obtenerLocation(latitude, longitude):
     print (locname)
     return locname
 
-def editarEventoTitle(oldTitle, newTitle):
-    service = get_calendar_service()
+def editarEventoTitle(tokenUser, oldTitle, newTitle):
+    service = get_calendar_service(tokenUser)
     events = buscarEventoTitle(oldTitle)
     for event in events['items']:
         #modificar aqui cada evento
@@ -135,8 +135,8 @@ def editarEventoTitle(oldTitle, newTitle):
         updated_event = service.events().update(calendarId='primary', eventId=event['id'], body=event).execute()
         print( updated_event['updated'])
 
-def editarEventoDate(title, dateTimeStart, dateTimeEnd):
-    service = get_calendar_service()
+def editarEventoDate(tokenUser,title, dateTimeStart, dateTimeEnd):
+    service = get_calendar_service(tokenUser)
     events = buscarEventoTitle(title)
     for event in events['items']:
         #modificar aqui cada evento
@@ -145,8 +145,8 @@ def editarEventoDate(title, dateTimeStart, dateTimeEnd):
         updated_event = service.events().update(calendarId='primary', eventId=event['id'], body=event).execute()
         print( updated_event['updated'])
 
-def editarEventoDesciption(title, description):
-    service = get_calendar_service()
+def editarEventoDesciption(tokenUser, title, description):
+    service = get_calendar_service(tokenUser)
     events = buscarEventoTitle(title)
     for event in events['items']:
         #modificar aqui cada evento

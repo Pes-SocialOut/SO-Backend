@@ -3,7 +3,7 @@
 from cmath import exp
 import sqlalchemy
 from app.module_event.models import Event, Participant, Like, Review
-from app.module_users.models import User
+from app.module_users.models import User, GoogleAuth
 from profanityfilter import ProfanityFilter
 from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity, jwt_required
 from datetime import datetime, timedelta
@@ -39,7 +39,7 @@ max_latitude_catalunya = 42.85
 
 
 @module_event_v3.route('/', methods=['POST'])
-@jwt_required(optional=False)
+@jwt_required(optional=True)  # cambio esto y lo pongo en True
 def create_event():
     try:
         args = request.json
@@ -88,7 +88,10 @@ def create_event():
         return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
 
    # TODO Añadir evento al calendario del creador
-    crearEvento(event.name, event.description, event.latitude, event.longitud, str(event.date_started), str(event.date_end))
+
+    auth_id = get_jwt_identity()
+    #user = GoogleAuth.query.filter_by(id=auth_id).first()
+    crearEvento(auth_id, event.name, event.description, event.latitude, event.longitud, str(event.date_started), str(event.date_end))
 
     eventJSON = event.toJSON()
     return jsonify(eventJSON), 201

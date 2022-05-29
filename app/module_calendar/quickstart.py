@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import datetime
 import os.path
+import json
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -17,7 +18,7 @@ SCOPES = ['https://www.googleapis.com/auth/calendar']
 
 
 
-def get_calendar_service():
+def get_calendar_service(tokenUser):
     """Shows basic usage of the Google Calendar API.
     Prints the start and name of the next 10 events on the user's calendar.
     """
@@ -26,8 +27,17 @@ def get_calendar_service():
     # created automatically when the authorization flow completes for the first
     # time.
     if os.path.exists('token.json'):
+       with open('token.json', 'r+') as token:
+           data = json.load(token)
+           data['token'] = tokenUser
+           token.seek(0)
+           json.dump(data, token, indent=4)
+           token.truncate()
        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-      
+       print(creds.to_json()[0])
+       
+
+    """
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
@@ -39,21 +49,10 @@ def get_calendar_service():
         # Save the credentials for the next run
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
-        #we delegated credentials for user of the app 
-
-    flow = InstalledAppFlow.from_client_secrets_file(  #secretfile
-                    'app/module_calendar/hola.json', SCOPES)
-    creds = flow.run_local_server(port=8080)
-            # Save the credentials for the next run
-    with open('token.json', 'w') as token:
-                token.write(creds.to_json())
-            #we delegated credentials for user of the app   
-    
-
-        
+        #we delegated credentials for user of the app       
         #creds = service_account.Credentials.from_service_account_file(
         #    'app/module_calendar/SocialOutServicex2.json', scopes=SCOPES)
-        #delegated_credentials = creds.with_subject('francesc.holly@estudiantat.upc.edu')
+        #delegated_credentials = creds.with_subject('francesc.holly@estudiantat.upc.edu') """
     service = build('calendar', 'v3', credentials=creds)
 
         
