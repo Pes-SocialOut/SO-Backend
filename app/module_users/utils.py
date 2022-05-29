@@ -38,7 +38,9 @@ def send_verification_code_to(email):
         db_verification.code = code
         db_verification.expires_at = datetime.now(timezone.utc)+timedelta(minutes=15)
         db.session.commit()
-    send_email(email, 'SocialOut auth verification code', f'Your verification code for SocialOut authentication is {code}. It expires in 15 minutes.')
+    successful_email = send_email(email, 'SocialOut auth verification code', f'Your verification code for SocialOut authentication is {code}. It expires in 15 minutes.')
+    if not successful_email:
+        db_verification.delete()
 
 def generate_tokens(user_id):
     access_token = create_access_token(identity=user_id)
@@ -73,4 +75,5 @@ def increment_achievement_of_user(ach, user):
             if achievement_progress.progress == achievement_template.stages:
                 achievement_progress.completed_at = datetime.now()
     if ach_updated:
-        achievement_progress.save()
+        print("yesssir")
+        #achievement_progress.save()

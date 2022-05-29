@@ -7,7 +7,8 @@ from app.module_users.models import User
 from profanityfilter import ProfanityFilter
 from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity, jwt_required
 from datetime import datetime, timedelta
-from flask import (Blueprint, request, jsonify)
+from sqlalchemy import create_engine
+from flask import (Blueprint, request, jsonify, current_app)
 import uuid
 import validators
 
@@ -396,8 +397,12 @@ def get_user_joins(id):
         return jsonify({"error_message": "Error when querying participants"}), 400
     try:
         events = []
+        current_date = datetime.now() + timedelta(hours=2)
         for ides in events_joined:
-            events.append(Event.query.get(ides.event_id))
+            the_event = Event.query.get(ides.event_id)
+            # Solo añadir los eventos ACTIVOS
+            if the_event.date_end >= current_date:
+                events.append(the_event)
         return jsonify([event.toJSON() for event in events]), 200
     except:
         return jsonify({"error_message": "Unexpected error"}), 400
@@ -423,9 +428,8 @@ def get_event(id):
     except:
         return jsonify({"error_message": f"The event {event_id} doesn't exist"}), 400
 
+
 # OBTENER EVENTOS POR USUARIO CREADOR method: devuelve todos los eventos creados por un usuario
-
-
 @module_event_v3.route('/creator', methods=['GET'])
 # RECIBE:
 # - GET HTTP request con la id del usuario del que se quieren obtener los eventos creados como query parameter.
@@ -452,7 +456,14 @@ def get_creations():
 
     try:
         events_creats = Event.query.filter_by(user_creator=user_id)
-        return jsonify([event.toJSON() for event in events_creats]), 200
+        current_date = datetime.now() + timedelta(hours=2)
+        active_events = []
+         # Solo añadir los eventos ACTIVOS
+        for event in events_creats:
+            if event.date_end >= current_date:
+                active_events.append(event)
+        
+        return jsonify([event.toJSON() for event in active_events]), 200
     except:
         return jsonify({"error_message": "An unexpected error ocurred"}), 400
 
@@ -508,13 +519,23 @@ def delete_event(id):
         except:
             return jsonify({"error_message": "error while deleting likes of an event"}), 400
 
-    # TODO Eliminar las reviews de un evento ANTES DE ELIMINAR EL EVENTO
+   # Eliminar las reviews de un evento ANTES DE ELIMINAR EL EVENTO
+    try:
+        reviews = Review.query.filter_by(event_id=event_id).all()
+    except:
+        return jsonify({"error_message": "error while querying likes of an event"}), 400
+
+    for r in reviews:
+        try:
+            r.delete()
+        except:
+            return jsonify({"error_message": "error while deleting reviews of an event"}), 400
 
     try:
         event.delete()
         return jsonify({"error_message": "Successful DELETE"}), 202
     except:
-        return jsonify({"error_message": "error while deleting"}), 400
+        return jsonify({"error_message": "error while deleting the event"}), 400
 
 
 # GET ALL EVENTOS ACTIVOS method: retorna toda la informacion de todos los eventos activos de la database
@@ -523,7 +544,7 @@ def delete_event(id):
 # - GET HTTP request
 # DEVUELVE:
 # - 400: Un objeto JSON con los posibles mensajes de error
-# - 201: Un objeto JSON con todos los eventos que hay en el sistema
+# - 201: Un objeto JSON con todos los eventos activos que hay en el sistema
 @jwt_required(optional=False)
 def get_all_events():
     try:
@@ -596,7 +617,9 @@ def filter_by():
 @jwt_required(optional=False)
 def lastest_events():
     try:
-        lasts_events = Event.query.order_by(Event.date_creation.desc()).all()
+        # La data de ahora es en GMT+2 por lo tanto tenemos que sumar dos horas en el tiempo actual
+        current_date = datetime.now() + timedelta(hours=2)
+        lasts_events = Event.query.filter(Event.date_end >= current_date).order_by(Event.date_creation.desc()).all()
     except:
         return {"error_message": "Error while querying events"}
 
@@ -841,8 +864,12 @@ def get_likes_by_user(iduser):
         return jsonify({"error_message": "Error when querying likes"}), 400
     try:
         events = []
+        current_date = datetime.now() + timedelta(hours=2)
         for i in likes_user:
-            events.append(Event.query.get(i.event_id))
+            the_event = Event.query.get(i.event_id)
+            # Solo añadir los eventos ACTIVOS
+            if the_event.date_end >= current_date:
+                events.append(the_event)
         return jsonify([event.toJSON() for event in events]), 200
     except:
         return jsonify({"error_message": "Unexpected error"}), 400
@@ -894,51 +921,33 @@ def get_likes_from_user(iduser, idevento):
 # - 200: Un objeto JSON con los top 10 eventos con mas likes
 @jwt_required(optional=False)
 def get_top_ten_events():
-    # Coger todos los likes de la DB
-    try:
-        all_likes = Like.get_all()
-    except:
-        return jsonify({"error_message": "error getting likes"}), 400
+    db_uri = current_app.config.get('SQLALCHEMY_DATABASE_URI')
+    engine = create_engine(db_uri)
+    sql_query = db.text("select e.id, e.name, e.description, e.date_started, e.date_end, e.date_creation, e.user_creator, e.longitud, e.latitude, e.max_participants, e.date_creation, e.event_image_uri from events e left join likes l on e.id = l.event_id where e.date_end >= CURRENT_TIMESTAMP group by e.id order by count(distinct l.user_id) desc limit 10;")
+    with engine.connect() as conn:
+        result_as_list = conn.execute(sql_query).fetchall() 
 
-    # Guardar todos los likes de cada evento en un array Y FUNCIONA
-    try:
-        likes_in_events = {}
-        for like in all_likes:
-            s = str(like.event_id)
-            if s in likes_in_events:
-                likes_in_events[s] = likes_in_events[s] + 1
-            else:
-                likes_in_events[s] = 1
-    except:
-        return jsonify({"error_message": "error asignando vector likes"}), 400
-
-    # Guardar los top 10 eventos con mas likes en un array
-    i = 1
-    top_ten = []
-    while i <= 10:
-        most_likes = 0
-        most_liked_event = None
-        for event in likes_in_events:
-            if likes_in_events[event] >= most_likes:
-                most_liked_event = event
-                most_likes = likes_in_events[event]
-        if most_liked_event != None:
-            top_ten.append(most_liked_event)
-            likes_in_events.pop(most_liked_event)
-        i += 1
-
-    # Coger la info de cada evento
     top_ten_with_info = []
-    for event in top_ten:
-        try:
-            event_to_add = Event.query.filter_by(id=event).first()
-        except:
-            return jsonify({"error_message": "error en coger el top ten"}), 400
+    for result in result_as_list:
+        top_ten_with_info.append(dataToJSON(result))
 
-        top_ten_with_info.append(event_to_add)
+    return jsonify([dataToJSON(event) for event in result_as_list]), 200
 
-    return jsonify([event.toJSON() for event in top_ten_with_info]), 200
 
+def dataToJSON(data):
+    return {
+        "id": data[0],
+        "name": data[1],
+        "description": data[2],
+        "date_started": data[3],
+        "date_end": data[4],
+        "date_creation": data[5],
+        "user_creator": data[6],
+        "longitud": data[7],
+        "latitude": data[8],
+        "max_participants": data[9],
+        "event_image_uri": data[10]
+    }
 
 ########################################################################### R E V I E W S ##################################################################
 
@@ -1060,8 +1069,6 @@ def get_reviews_evento():
     if event is None:
         return jsonify({"error_message": f"Event {event_id} doesn't exist"}), 400
     
-    # TODO Quien puede acceder a estos datos? Creador solo o todos los usuarios?
-
     try:
         reviews = Review.query.filter_by(event_id=event_id)
     except:
