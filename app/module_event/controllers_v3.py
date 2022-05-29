@@ -943,7 +943,7 @@ def get_likes_from_user(iduser, idevento):
 def get_top_ten_events():
     db_uri = current_app.config.get('SQLALCHEMY_DATABASE_URI')
     engine = create_engine(db_uri)
-    sql_query = db.text("select e.id, e.name, e.description, e.date_started, e.date_end, e.date_creation, e.user_creator, e.longitud, e.latitude, e.max_participants, e.date_creation, e.event_image_uri from events e left join likes l on e.id = l.event_id where e.date_end >= CURRENT_TIMESTAMP group by e.id order by count(distinct l.user_id) desc limit 10;")
+    sql_query = db.text("select e.id, e.name, e.description, e.date_started, e.date_end, e.date_creation, e.user_creator, e.longitud, e.latitude, e.max_participants, e.event_image_uri from events e left join likes l on e.id = l.event_id where e.date_end >= CURRENT_TIMESTAMP group by e.id order by count(distinct l.user_id) desc limit 10;")
     with engine.connect() as conn:
         result_as_list = conn.execute(sql_query).fetchall() 
 
