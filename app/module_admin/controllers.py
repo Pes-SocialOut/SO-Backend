@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify, request, current_app
 from datetime import datetime
 from flask_jwt_extended import get_jwt_identity, jwt_required
 import sqlalchemy as db
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, desc
 import uuid
 
 from app.module_event.controllers_v3 import delete_event
@@ -48,55 +48,51 @@ def login():
 # - 200: Un objeto JSON con los usuarios y, en cada uno, sus eventos reportados 
 @jwt_required(optional=False)
 def get_reported_events():
-    
     # Ver si el token es de un admin
     auth_id = get_jwt_identity()
     if not Admin.exists(auth_id):
-        return jsonify({"error_message": "You're not an admin ;)"}), 400
+        return jsonify({"error_message": "Only administrators can access this resource."}), 400
 
     db_uri = current_app.config.get('SQLALCHEMY_DATABASE_URI')
     engine = create_engine(db_uri)
-    sql_query = db.text("SELECT events.user_creator, users.username, events.id, events.name, events.date_started , events.date_end, events.max_participants, COUNT(*) AS num_reports FROM events LEFT JOIN users ON events.user_creator = users.id LEFT JOIN review ON events.id = review.event_id WHERE review.rating = 0 GROUP BY events.user_creator, users.username, events.id, events.name, events.date_started , events.date_end, events.max_participants ORDER by num_reports DESC;")
+    sql_query = db.text(" \
+        select u.id, u.username, u.email, e.id, e.name, e.date_started, e.date_end, e.max_participants, count(*) as num_reports \
+        from review r inner join events e on r.event_id = e.id inner join users u on e.user_creator = u.id \
+        where r.rating = 0 \
+        group by u.id, u.username, u.email, e.id, e.name, e.date_started, e.date_end, e.max_participants \
+        order by num_reports desc;")
     with engine.connect() as conn:
-        result_as_list = conn.execute(sql_query).fetchall()    
-    
-    data_events = []
-    for result in result_as_list:
-        data_events.append(dataToJSON(result))
-    
-    for u1 in data_events:
-        events_of_a_user = []
-        event_user = [u1["user_id"], u1["user_username"]]
-        for u2 in data_events:
-            if u1["user_id"] == u2["user_id"]:
-                events_of_a_user.append(u2["reported_event"])
-        
-    definitive = eventJSON(event_user, events_of_a_user)
+        result_as_list = conn.execute(sql_query).fetchall()
 
-    return jsonify(definitive), 200
+    reported_users = {}
+    for r in result_as_list:
+        if r[2] not in reported_users:
+            reported_users[r[2]] = {'user_id': r[0], 'user_username': r[1], 'user_email': r[2], 'reported_events': [parse_reported_event(r)]}
+        else:
+             reported_users[r[2]]['reported_events'].append(parse_reported_event(r))
 
+    sorted_reported_users = sorted(reported_users.values(), key=lambda x: len(x))
+    return jsonify(sorted_reported_users), 200
 
-def dataToJSON(data):
+def parse_reported_event(data):
     return {
-        "user_id": data[0],
-        "user_username": data[1],
-        "reported_event": {
-            "event_id": data[2],
-            "event_name": data[3],
-            "event_date_started": data[4],
-            "event_date_end": data[5],
-            "event_max_participants": data[6],
-            "event_num_reports": data[7],
-        }
+        "event_id": data[3],
+        "event_name": data[4],
+        "event_date_started": data[5],
+        "event_date_end": data[6],
+        "event_max_participants": data[7],
+        "event_num_reports": data[8]
     }
 
-def eventJSON(data, events):
-    return {
-        "id": data[0],
-        "username": data[1],
-        "reported_event": events
-    }
-
+@module_admin_v1.route('/banned', methods=['GET'])
+@jwt_required(optional=False)
+def get_banned():
+    auth_id = get_jwt_identity()
+    if not Admin.exists(auth_id):
+        return jsonify({'error_message': 'Only administrators can make this action.'}), 403
+    
+    banned_users = BannedEmails.query.order_by(desc(BannedEmails.date)).all()
+    return jsonify([bu.toJSON() for bu in banned_users]), 200
 
 @module_admin_v1.route('/ban', methods=['POST'])
 @jwt_required(optional=False)
@@ -187,7 +183,6 @@ def ban():
     return jsonify({'message': 'User email banned.'}), 201
 
 
-
 @module_admin_v1.route('/unban', methods=['POST'])
 @jwt_required(optional=False)
 def unban():
@@ -198,7 +193,7 @@ def unban():
         return jsonify({'error_message': 'Missing email in json body.'}), 400
     
     email = request.json['email']
-    reason = request.json['reason']
+    reason = None if 'reason' not in request.json else request.json['reason']
 
     ban = BannedEmails.query.filter_by(email = email).first()
     if ban == None:

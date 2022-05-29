@@ -360,3 +360,11 @@ class BannedEmails(db.Model):
     @staticmethod
     def exists(email):
         return BannedEmails.query.filter_by(email = email).first() != None
+    
+    def toJSON(self):
+        return {
+            'email': self.email,
+            'username': self.username,
+            'date': self.date,
+            'reason': self.reason
+        }
