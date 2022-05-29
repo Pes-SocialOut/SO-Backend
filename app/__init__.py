@@ -29,6 +29,7 @@ from app.module_event.controllers import module_event_v1
 from app.module_event.controllers_v2 import module_event_v2
 from app.module_airservice.controllers import module_airservice_v1
 from app.module_airservice.jobs.controllers import module_airservice_jobs
+from app.module_chat.controllers import module_chat_v1
 
 @app.errorhandler(404)
 def not_found(error):
@@ -44,3 +45,4 @@ app.register_blueprint(module_event_v1)
 app.register_blueprint(module_event_v2)
 app.register_blueprint(module_airservice_v1)
 app.register_blueprint(module_airservice_jobs)
+app.register_blueprint(module_chat_v1)
