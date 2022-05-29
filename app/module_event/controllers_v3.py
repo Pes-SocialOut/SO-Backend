@@ -13,6 +13,7 @@ from sqlalchemy import create_engine
 from flask import (Blueprint, request, jsonify, current_app)
 import uuid
 import validators
+import json
 
 # Import the database object from the main app module
 from app import db
@@ -301,20 +302,21 @@ def join_event(id):
 
     # Errores al guardar en la base de datos: FK violated, etc
     try:
-        #participant.save()
-        print("yessir")
+        participant.save()
     except sqlalchemy.exc.IntegrityError:
         return jsonify({"error_message": f"FK violated, el usuario {user_id} ya se ha unido al evento o no esta definido en la BD"}), 400
     except:
         return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
 
     # Si es un evento con contaminacion baja, se añade uno al achievement Social bug
-    cont = general_quality_at_a_point(41.103706, 1.2007992)
-    # if cont[0] == 200:
+    cont_level, cont_status = general_quality_at_a_point(event.longitud, event.latitude)
+    if cont_status == 200:
         # Si es un evento con poca contaminacion, suma achievement Social Bug
-        # if cont[1]["pollution"] < 0.15:
-        #     increment_achievement_of_user("social_bug",user_id)
-    return jsonify({"message": f"el usuario {cont} se han unido CON EXITO"}), 200
+        contaminacion = json.loads(cont_level.response[0])
+        if contaminacion["pollution"] < 0.15:
+            increment_achievement_of_user("social_bug",user_id)
+
+    return jsonify({"message": f"el usuario se han unido CON EXITO"}), 200
 
 
 # ABANDONAR EVENTO: Usuario abandona a un evento
@@ -432,15 +434,15 @@ def get_event(id):
     except:
         return jsonify({"error_message": f"The event {event_id} doesn't exist"}), 400
 
-
     # Si es un evento con contaminacion baja, se añade uno al achievement Healthy Curiosity
     cont_level, cont_status = general_quality_at_a_point(event.longitud, event.latitude)
     if cont_status == 200:
         # Si es un evento con poca contaminacion, suma achievement Social Bug
-        if cont_level["pollution"] < 0.15:
+        contaminacion = json.loads(cont_level.response[0])
+        if contaminacion["pollution"] < 0.15:
             auth_id = get_jwt_identity()
             try:
-                increment_achievement_of_user("healthy_curiosity",auth_id)
+                increment_achievement_of_user("healthy_curiosity", auth_id)
             except:
                 return jsonify({"error_message": f"Error adding an achievement"}), 400
 

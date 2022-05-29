@@ -68,7 +68,7 @@ def increment_achievement_of_user(ach, user):
         achievement_progress = AchievementProgress(user, ach, 1, None)
         ach_updated = True
     else:
-        achievement_template = Achievement.query.filter_by(achievement = ach).first()
+        achievement_template = Achievement.query.filter_by(id = ach).first()
         if achievement_progress.progress < achievement_template.stages:
             ach_updated = True
             achievement_progress.progress += 1
