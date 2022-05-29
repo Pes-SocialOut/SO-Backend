@@ -75,5 +75,4 @@ def increment_achievement_of_user(ach, user):
             if achievement_progress.progress == achievement_template.stages:
                 achievement_progress.completed_at = datetime.now()
     if ach_updated:
-        print("yesssir")
-        #achievement_progress.save()
+        achievement_progress.save()
