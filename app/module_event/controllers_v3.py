@@ -494,7 +494,7 @@ def delete_event(id):
 
     # restricion: solo el usuario creador puede eliminar su evento (o un admin) (mirando Bearer Token)
     auth_id = get_jwt_identity()
-    if str(event.user_creator) != auth_id or not Admin.exists(auth_id):
+    if str(event.user_creator) != auth_id and not Admin.exists(auth_id):
         return jsonify({"error_message": "A user cannot delete events if they are not the creator"}), 403
 
     # Eliminar todos los participantes del evento ANTES DE ELIMINAR EL EVENTO
