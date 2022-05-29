@@ -78,6 +78,8 @@ def create_event():
     # Añadir el creador al evento como participante
     participant = Participant(event.id, user_creator)
 
+    # TODO Si es el primer evento que crea, darle el noob host
+
     try:
         participant.save()
     except sqlalchemy.exc.IntegrityError:
@@ -316,7 +318,7 @@ def join_event(id):
         if contaminacion["pollution"] < 0.15:
             increment_achievement_of_user("social_bug",user_id)
 
-    return jsonify({"message": f"el usuario se han unido CON EXITO"}), 200
+    return jsonify({"message": f"el usuario {user_id} se han unido CON EXITO"}), 200
 
 
 # ABANDONAR EVENTO: Usuario abandona a un evento
@@ -732,7 +734,9 @@ def get_past_evento():
 
     # if events_of_participant is None, it means that the user doesn't participate in any event
     events_of_participant = Participant.query.filter_by(user_id=user_id)
-    
+
+    # TODO eventos de un participantes NO INCLUYEN tus eventos
+
     # La data de ahora es en GMT+2 por lo tanto tenemos que sumar dos horas en el tiempo actual
     current_date = datetime.now() + timedelta(hours=2)
     past_events = []        
@@ -1058,6 +1062,11 @@ def crear_review():
         return jsonify({"error_message": "Integrity error, FK violated (algo no esta definido en la BD)"}), 400
     except:
         return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
+
+    # TODO Si es la primera review de un usuario, darle el logro feedback monster
+    reviews = Review.query.filter_by(user_id=user_id).count()
+    if reviews == 1:
+        increment_achievement_of_user("feedback_monster", user_id)
 
     # Devolver nueva review en formato JSON si todo ha funcionado correctamente
     ratingJSON = new_rating.toJSON()
