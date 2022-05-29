@@ -12,6 +12,8 @@ from flask import (Blueprint, request, jsonify, current_app)
 import uuid
 import validators
 
+from app.module_calendar.functions_calendar import crearEvento
+
 # Import the database object from the main app module
 from app import db
 
@@ -83,6 +85,9 @@ def create_event():
         return jsonify({"error_message": "FK violated"}), 400
     except:
         return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
+
+   # TODO Añadir evento al calendario del creador
+    crearEvento(event.name, event.description, event.latitude, event.longitud, str(event.date_started), str(event.date_end))
 
     eventJSON = event.toJSON()
     return jsonify(eventJSON), 201
