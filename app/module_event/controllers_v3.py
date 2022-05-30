@@ -2,7 +2,7 @@
 # Import module models (i.e. User)
 import sqlalchemy
 from app.module_event.models import Event, Participant, Like, Review
-from app.module_users.models import User
+from app.module_users.models import User, GoogleAuth
 from app.module_admin.models import Admin
 from app.module_airservice.controllers import general_quality_at_a_point
 from app.module_users.utils import increment_achievement_of_user
@@ -39,10 +39,11 @@ max_latitude_catalunya = 42.85
 # - 400: Un objeto JSON con un mensaje de error
 # - 201: Un objeto JSON con todos los parametros del evento creado (con la id incluida)
 @module_event_v3.route('/', methods=['POST'])
-@jwt_required(optional=False)
+@jwt_required(optional=True)  # cambio esto y lo pongo en True
 def create_event():
     try:
         args = request.json
+        #args.noauth_local_webserver = True
     except:
         return jsonify({"error_message": "Mira el JSON body de la request, hay un atributo mal definido!"}), 400
 
