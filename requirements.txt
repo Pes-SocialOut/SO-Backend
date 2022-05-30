@@ -10,7 +10,6 @@ click==7.1.2
 cycler==0.11.0
 cymem==2.0.6
 decorator==5.1.1
-en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.3.1/en_core_web_sm-2.3.1.tar.gz
 Flask==1.1.4
 Flask-Cors==3.0.10
 Flask-Hashing==1.1
