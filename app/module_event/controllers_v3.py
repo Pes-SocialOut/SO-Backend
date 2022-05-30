@@ -45,7 +45,7 @@ max_latitude_catalunya = 42.85
 def create_event():
     try:
         args = request.json
-        args.noauth_local_webserver = True
+        #args.noauth_local_webserver = True
     except:
         return jsonify({"error_message": "Mira el JSON body de la request, hay un atributo mal definido!"}), 400
 
@@ -94,9 +94,11 @@ def create_event():
 
    # TODO Añadir evento al calendario del creador
 
-    auth_id = get_jwt_identity()
+    #auth_id = get_jwt_identity()
+    auth_id = "ya29.a0ARrdaM99ZqlnV7u_IYRkbA6QjYmK7I8AbMNud4-GJRQQnFY-O8flULYrHh7hzxD-y84qewstJv3rzkiY16mvqdjSwAP4RUOO5wi9Yrvu4Asos0amdgn7j20lse0YYxfcmRZbi-0vy5kfT24_yDU7p1c2OpSq2Q"
     #user = GoogleAuth.query.filter_by(id=auth_id).first()
-    crearEvento(auth_id, event.name, event.description, event.latitude, event.longitud, str(event.date_started), str(event.date_end))
+    crearEvento(auth_id, "maybe va ;)", "esto es un evento de prueba", 41.3713, 2.1494, '2022-05-10T09:00:00','2022-05-10T10:00:00')
+    #crearEvento(auth_id, event.name, event.description, event.latitude, event.longitud, str(event.date_started), str(event.date_end))
 
     eventJSON = event.toJSON()
     return jsonify(eventJSON), 201
