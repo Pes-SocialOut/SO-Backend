@@ -25,8 +25,9 @@ class air_quality_station(db.Model):
     longitude = db.Column(db.Float)
     air_condition_scale = db.Column(db.Float)
     time_computation_scale = db.Column(db.DateTime)
+    codi_comarca = db.Column(db.Float)
 
-    def __init__(self, name, eoi_code, station_type, urban_area, altitude, latitude, longitude, air_condition_scale, time_computation_scale):
+    def __init__(self, name, eoi_code, station_type, urban_area, altitude, latitude, longitude, air_condition_scale, time_computation_scale, codi_comarca):
         
         self.name = name
         self.eoi_code = eoi_code
@@ -37,6 +38,7 @@ class air_quality_station(db.Model):
         self.longitude = longitude
         self.air_condition_scale = air_condition_scale
         self.time_computation_scale = time_computation_scale
+        self.codi_comarca = codi_comarca
 
     def save(self):
         db.session.add(self)
@@ -51,7 +53,7 @@ class air_quality_station(db.Model):
         db.session.commit()
 
     def __repr__(self):
-        return "".format(self.name, self.eoi_code, self.station_type, self.urban_area, self.altitude, self.longitude, self.latitude, self.air_condition_scale, self.time_computation_scale)
+        return "".format(self.name, self.eoi_code, self.station_type, self.urban_area, self.altitude, self.longitude, self.latitude, self.air_condition_scale, self.time_computation_scale, self.codi_comarca)
 
     def toJSON(self):
         return {
@@ -63,7 +65,8 @@ class air_quality_station(db.Model):
             'longitude': self.longitude,
             'latitude': self.latitude,
             'pollution': self.air_condition_scale,
-            'last_calculated_at': self.time_computation_scale
+            'last_calculated_at': self.time_computation_scale,
+            'codi_comarca': self.codi_comarca
         }
 
 class pollutant(db.Model):
@@ -146,3 +149,11 @@ class triangulation_cache(db.Model):
 
     def __init__(self):
         self.tri_object_bytes = None
+
+class ml_model(db.Model):
+    __tablename__ = 'ml_model'
+
+    ml_model_bytes = db.Column(BYTEA, primary_key=True)
+
+    def __init__(self):
+        self.ml_model_bytes = None
