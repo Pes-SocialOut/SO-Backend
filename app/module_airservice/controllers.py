@@ -1,4 +1,6 @@
 import pickle
+import _pickle as cPickle
+import bz2
 import pandas as pd
 from sklearn import metrics
 
@@ -9,7 +11,7 @@ from flask import Blueprint, jsonify, request #, render_template, flash, g, sess
 from app import db
 
 # Import module models
-from app.module_airservice.models import air_quality_station, air_quality_data, pollutant, triangulation_cache
+from app.module_airservice.models import air_quality_station, air_quality_data, ml_model_cache, pollutant, triangulation_cache
 
 
 # Import time libraries
@@ -337,16 +339,13 @@ estaciones = {8015001: {'ALTITUD': 6,
   'LONGITUD': 1.6230061,
   'TIPUS ESTACIO': 1}}
 
-#machine learning
-@module_airservice_v1.route('/ml/', methods=['GET'])
-def machine_learning():
-        # Parametros JSON
-    try:
-        args = request.json
-    except:
-        return jsonify({"error_message": "Mira el JSON body de la request, hay un atributo mal definido"}), 400 
 
-   
+#machine learning
+@module_airservice_v1.route('/ml', methods=['GET'])
+def machine_learning():
+    tipus_estacio_mapping = {"peri-urban": 3, "background": 0, "industrial": 1, "traffic": 2}
+    area_urbana_mapping = {"rural": 0, "suburban": 1, "urban": 2}
+    
     try:
         codi_eoi1 = float(request.args.get('codi_eoi1'))
         contaminant1 = float(request.args.get('contaminante1'))
@@ -356,28 +355,74 @@ def machine_learning():
         contaminant3 = float(request.args.get('contaminante3'))
         dia = float(request.args.get('dia'))
         mes = float(request.args.get('mes'))
-        año = float(request.args.get('año'))
+        year = float(request.args.get('year'))
         hora = float(request.args.get('hora'))
         latitud = float(request.args.get('latitud'))
         longitud = float(request.args.get('longitud'))
+        filename = 'app/module_airservice/finalized_model.pbz2'
+        loaded_model = cPickle.load(bz2.BZ2File(filename, 'rb'))
     except ValueError:
-        return jsonify({"error_message":"holita"}), 400
+        return jsonify({"error_message":"Bad query params"}), 400
     
     try:
-        filename = 'app/module_airservice/finalized_model.sav'
-        loaded_model = pickle.load(open(filename, 'rb'))
+        """ machinelearning = ml_model_cache.query.first()
+        loaded_model = pkl.loads(machinelearning.ml_model_bytes)"""
+        query_result1 = air_quality_station.query.filter_by(eoi_code = '43013002').first()
+        query_result2 = air_quality_station.query.filter_by(eoi_code = request.args.get('codi_eoi2')).first()
+        query_result3 = air_quality_station.query.filter_by(eoi_code = request.args.get('codi_eoi3')).first()
+        if query_result1 == None:
+            return jsonify({"error_message":f"Station with eoi_code {request.args.get('codi_eoi1')} is not registered"}), 404
+        """pred1 = {"CODI EOI": codi_eoi1, 
+        "CONTAMINANT": contaminant1, 
+        "TIPUS ESTACIO": tipus_estacio_mapping[query_result1.station_type] , 
+        "AREA URBANA" : area_urbana_mapping[query_result1.urban_area] , 
+        "CODI INE": codi_eoi1[ 0 : 4 ] , 
+        "CODI COMARCA": query_result1.codi_comarca , 
+        "ALTITUD": query_result1.altitude , 
+        "LATITUD": query_result1.latitude , 
+        "LONGITUD": query_result1.longitude , 
+        "Dia": dia, 
+        "Mes": mes, 
+        "Año": año, 
+        "Hora": hora }
+        pred2 = {"CODI EOI": codi_eoi2, 
+        "CONTAMINANT": contaminant2, 
+        "TIPUS ESTACIO": tipus_estacio_mapping[query_result2.station_type] , 
+        "AREA URBANA" : area_urbana_mapping[query_result2.urban_area] , 
+        "CODI INE": codi_eoi2[ 0 : 4 ] , 
+        "CODI COMARCA": query_result2.codi_comarca , 
+        "ALTITUD": query_result2.altitude , 
+        "LATITUD": query_result2.latitude , 
+        "LONGITUD": query_result2.longitude , 
+        "Dia": dia, 
+        "Mes": mes, 
+        "Año": año, 
+        "Hora": hora }
+        pred3 = {"CODI EOI": codi_eoi3, 
+        "CONTAMINANT": contaminant3, 
+        "TIPUS ESTACIO": tipus_estacio_mapping[query_result3.station_type] , 
+        "AREA URBANA" : area_urbana_mapping[query_result3.urban_area] , 
+        "CODI INE": codi_eoi3[ 0 : 4 ] , 
+        "CODI COMARCA": query_result3.codi_comarca , 
+        "ALTITUD": query_result3.altitude , 
+        "LATITUD": query_result3.latitude , 
+        "LONGITUD": query_result3.longitude , 
+        "Dia": dia, 
+        "Mes": mes, 
+        "Año": año, 
+        "Hora": hora }"""
         pred1 = {"CODI EOI": codi_eoi1, 
         "CONTAMINANT": contaminant1, 
         "TIPUS ESTACIO": estaciones[codi_eoi1]["TIPUS ESTACIO"], 
         "AREA URBANA" : estaciones[codi_eoi1]["AREA URBANA"], 
-        "CODI INE": estaciones[codi_eoi1]["CODI INE"], 
+        "CODI INE": str(codi_eoi1)[0:4], 
         "CODI COMARCA": estaciones[codi_eoi1]["CODI COMARCA"], 
-        "ALTITUD": estaciones[codi_eoi1]["ALTITUD"], 
+        "ALTITUD": query_result1.altitude, 
         "LATITUD": estaciones[codi_eoi1]["LATITUD"], 
         "LONGITUD": estaciones[codi_eoi1]["LONGITUD"], 
         "Dia": dia, 
         "Mes": mes, 
-        "Año": año, 
+        "Año": year, 
         "Hora": hora }
         pred2 = {"CODI EOI": codi_eoi2, 
         "CONTAMINANT": contaminant2, 
@@ -390,7 +435,7 @@ def machine_learning():
         "LONGITUD": estaciones[codi_eoi2]["LONGITUD"], 
         "Dia": dia, 
         "Mes": mes, 
-        "Año": año, 
+        "Año": year, 
         "Hora": hora }
         pred3 = {"CODI EOI": codi_eoi3, 
         "CONTAMINANT": contaminant3, 
@@ -403,7 +448,7 @@ def machine_learning():
         "LONGITUD": estaciones[codi_eoi3]["LONGITUD"], 
         "Dia": dia, 
         "Mes": mes, 
-        "Año": año, 
+        "Año": year, 
         "Hora": hora }
         
     except:
@@ -419,6 +464,7 @@ def machine_learning():
     pred3Ser = pd.Series(data=pred3, index=["CODI EOI", "CONTAMINANT", "TIPUS ESTACIO", "AREA URBANA" , "CODI INE", "CODI COMARCA", "ALTITUD", "LATITUD", "LONGITUD", "Dia", "Mes", "Año", "Hora" ])
     prediction3 = float(loaded_model.predict([pred3Ser]))
 
+    #w0, w1, w2 = barycentric_interpolation(query_result1.longitude, query_result1.latitude, query_result2.longitude, query_result2.latitude, query_result3.longitude, query_result3.latitude, longitud, latitud)
     w0, w1, w2 = barycentric_interpolation(estaciones[codi_eoi1]["LONGITUD"], estaciones[codi_eoi1]["LATITUD"], estaciones[codi_eoi2]["LONGITUD"], estaciones[codi_eoi2]["LATITUD"], estaciones[codi_eoi3]["LONGITUD"], estaciones[codi_eoi3]["LATITUD"], longitud, latitud)
     general_quality = w0*prediction1 + w1*prediction2 + w2*prediction3
 
