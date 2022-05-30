@@ -79,7 +79,8 @@ def create_event():
     # Añadir el creador al evento como participante
     participant = Participant(event.id, user_creator)
 
-    # TODO Si es el primer evento que crea, darle el noob host
+    # Si es el primer evento que crea, darle el noob host
+    increment_achievement_of_user("noob_host", user_creator)
 
     try:
         participant.save()
@@ -297,6 +298,11 @@ def join_event(id):
     num_participants = Participant.query.filter_by(event_id=event_id).all()
     if len(num_participants) >= event.max_participants:
         return jsonify({"error_message": f"El evento {event_id} ya esta lleno!"}), 400
+
+    # restriccion: el evento ya esta pasado
+    current_date = datetime.now() + timedelta(hours=2)
+    if event.date_end <= current_date:
+        return jsonify({"error_message": f"El evento {event_id} ya ha acabado!"}), 400
 
     participant = Participant(event_id, user_id)
 
@@ -733,9 +739,6 @@ def get_past_evento():
     # if events_of_participant is None, it means that the user doesn't participate in any event
     events_of_participant = Participant.query.filter_by(user_id=user_id)
 
-    # TODO eventos de un participantes NO INCLUYEN tus eventos
-    
-
     # La data de ahora es en GMT+2 por lo tanto tenemos que sumar dos horas en el tiempo actual
     current_date = datetime.now() + timedelta(hours=2)
     past_events = []        
@@ -743,8 +746,10 @@ def get_past_evento():
     for ev in events_of_participant:
         try:
             the_event = Event.query.get(ev.event_id)
-            if the_event.date_end <= current_date:
-                past_events.append(the_event)
+            # eventos de un participantes NO INCLUYEN tus eventos
+            if the_event.user_creator != user_id:
+                if the_event.date_end <= current_date:
+                    past_events.append(the_event)
         except:
             return jsonify({"error_message": "Error when querying events"}), 400
 
@@ -974,7 +979,7 @@ def dataToJSON(data):
 
 ########################################################################### R E V I E W S ##################################################################
 
-# CREAR UNA REVIEW: crear una review de un evento
+# CREAR REVIEW: crear una review de un evento
 @module_event_v3.route('/review', methods=['POST'])
 # DEVUELVE:
 # - 400 o 403: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
@@ -1062,10 +1067,8 @@ def crear_review():
     except:
         return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
 
-    # TODO Si es la primera review de un usuario, darle el logro feedback monster
-    reviews = Review.query.filter_by(user_id=user_id).count()
-    if reviews == 1:
-        increment_achievement_of_user("feedback_monster", user_id)
+    # Si es la primera review de un usuario, darle el logro feedback monster
+    increment_achievement_of_user("feedback_monster", user_id)
 
     # Devolver nueva review en formato JSON si todo ha funcionado correctamente
     ratingJSON = new_rating.toJSON()
