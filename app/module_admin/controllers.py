@@ -115,9 +115,9 @@ def ban():
     ban_reason = None if 'reason' not in request.json else request.json['reason']
     current_time = datetime.now()
 
-    _, status = borrar_mensajes_usuario(user_id)
+    msg, status = borrar_mensajes_usuario(user_id)
     if status != 202:
-        return jsonify({'error_message': 'Chats cannot be successfully deleted.'}), 500
+        return jsonify({'error_message': 'Chats cannot be successfully deleted.', 'details': msg['error_message']}), 500
 
     # Buscar los eventos del banned_user
     all_events = Event.query.filter_by(user_creator = banned_user.id).all()
@@ -126,9 +126,12 @@ def ban():
         if current_time < event.date_started:
             event_date_str = event.date_started.strftime('%Y-%m-%d')
             for participant in event.participants_in_event:
-                if participant.id != banned_user.id:
-                    send_email(participant.email, 'Event cacellation!', f'We are sorry to inform you that the event titled "{event.name}" that was scheduled for {event_date_str} has been cacelled.\n\nYours sincerely,\nThe SocialOut team.')
-        delete_event(event.id)
+                participant_user = User.query.filter_by(id = participant.user_id).first()
+                if participant_user.id != banned_user.id:
+                    send_email(participant_user.email, 'Event cancellation!', f'We are sorry to inform you that the event titled "{event.name}" that was scheduled for {event_date_str} has been cacelled.\n\nYours sincerely,\nThe SocialOut team.')
+        msg, status = delete_event(str(event.id))
+        if status != 202:
+            return jsonify({'error_message': 'Events cannot be successfully deleted.', 'details': msg['error_message']}), 500
     
     # Notificar baneo a usuario
     email_body = 'Due to an accumulation of bad reviews that have been determined to be sufficient to take action we feel obligated to ban you from the SocialOut platform.\n'

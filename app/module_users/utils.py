@@ -63,17 +63,15 @@ def verify_password_strength(pw):
 
 def increment_achievement_of_user(ach, user):
     ach_updated = False
+    achievement_template = Achievement.query.filter_by(id = ach).first()
     achievement_progress = AchievementProgress.query.filter_by(achievement = ach).filter_by(user = user).first()
     if achievement_progress == None:
         achievement_progress = AchievementProgress(user, ach, 1, None)
         ach_updated = True
-    else:
-        achievement_template = Achievement.query.filter_by(achievement = ach).first()
-        if achievement_progress.progress < achievement_template.stages:
-            ach_updated = True
-            achievement_progress.progress += 1
-            if achievement_progress.progress == achievement_template.stages:
-                achievement_progress.completed_at = datetime.now()
+    elif achievement_progress.progress < achievement_template.stages:
+        achievement_progress.progress += 1
+        ach_updated = True
     if ach_updated:
-        print("yesssir")
-        #achievement_progress.save()
+        if achievement_progress.progress == achievement_template.stages:
+            achievement_progress.completed_at = datetime.now()
+        achievement_progress.save()

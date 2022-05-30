@@ -1,16 +1,20 @@
 # Import flask dependencies
 # Import module models (i.e. User)
-from cmath import exp
 import sqlalchemy
 from app.module_event.models import Event, Participant, Like, Review
 from app.module_users.models import User, GoogleAuth
+from app.module_admin.models import Admin
+from app.module_airservice.controllers import general_quality_at_a_point
+from app.module_users.utils import increment_achievement_of_user
+
 from profanityfilter import ProfanityFilter
-from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity, jwt_required
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 from flask import (Blueprint, request, jsonify, current_app)
 import uuid
 import validators
+import json
 
 from app.module_calendar.functions_calendar import crearEvento
 
@@ -36,8 +40,6 @@ max_latitude_catalunya = 42.85
 # Devuelve:
 # - 400: Un objeto JSON con un mensaje de error
 # - 201: Un objeto JSON con todos los parametros del evento creado (con la id incluida)
-
-
 @module_event_v3.route('/', methods=['POST'])
 @jwt_required(optional=True)  # cambio esto y lo pongo en True
 def create_event():
@@ -49,7 +51,7 @@ def create_event():
 
     event_uuid = uuid.uuid4()
 
-    response = check_atributes(args)
+    response = check_atributes(args, "create")
     if (response['error_message'] != "all good"):
         return jsonify(response), 400
 
@@ -79,6 +81,9 @@ def create_event():
 
     # Añadir el creador al evento como participante
     participant = Participant(event.id, user_creator)
+
+    # Si es el primer evento que crea, darle el noob host
+    increment_achievement_of_user("noob_host", user_creator)
 
     try:
         participant.save()
@@ -128,7 +133,7 @@ def modify_events_v2(id):
         return jsonify({"error_message": f"El evento {event_id} no existe"}), 400
 
     # Comprobar atributos de JSON para ver si estan bien
-    response = check_atributes(args)
+    response = check_atributes(args, "modify")
     if (response['error_message'] != "all good"):
         return jsonify(response), 400
 
@@ -143,10 +148,6 @@ def modify_events_v2(id):
 
     event.name = args.get("name")
     event.description = args.get("description")
-    event.date_started = datetime.strptime(
-        args.get("date_started"), '%Y-%m-%d %H:%M:%S')
-    event.date_end = datetime.strptime(
-        args.get("date_end"), '%Y-%m-%d %H:%M:%S')
     event.longitud = float(args.get("longitud"))
     event.latitude = float(args.get("latitude"))
     event.max_participants = int(args.get("max_participants"))
@@ -165,16 +166,17 @@ def modify_events_v2(id):
 
 # Metodo para comprobar los atributos pasados de un evento a crear o modificat (POST o PUT)
 # Devuelve: Diccionario con un mensaje de error o un mensaje de todo bien
-def check_atributes(args):
+def check_atributes(args, type):
     # restriccion 0: Mirar si los atributos estan en el body
     if args.get("name") is None:
         return {"error_message": "atributo name no esta en el body o es null"}
     if args.get("description") is None:
         return {"error_message": "atributo description no esta en el body o es null"}
-    if args.get("date_started") is None:
-        return {"error_message": "atributo date_started no esta en la URL o es null"}
-    if args.get("date_end") is None:
-        return {"error_message": "atributo date_end no esta en la URL o es null"}
+    if type != "modify":
+        if args.get("date_started") is None:
+            return {"error_message": "atributo date_started no esta en la URL o es null"}
+        if args.get("date_end") is None:
+            return {"error_message": "atributo date_end no esta en la URL o es null"}
     if args.get("user_creator") is None:
         return {"error_message": "atributo user_creator no esta en la URL o es null"}
     if args.get("longitud") is None:
@@ -206,14 +208,15 @@ def check_atributes(args):
         return {"error_message": "name, description or user_creator is empty!"}
 
     # restriccion 3: date started es mas grande que end date del evento (format -> 2015-06-05 10:20:10) y Comprobar Value Error
-    try:
-        date_started = datetime.strptime(
-            args.get("date_started"), '%Y-%m-%d %H:%M:%S')
-        date_end = datetime.strptime(args.get("date_end"), '%Y-%m-%d %H:%M:%S')
-        if date_started > date_end:
-            return {"error_message": f"date Started {date_started} is bigger than date End {date_end}, that's not possible!"}
-    except ValueError:
-        return {"error_message": f"date_started or date_ended aren't real dates or they don't exist!"}
+    if type != "modify":
+        try:
+            date_started = datetime.strptime(
+                args.get("date_started"), '%Y-%m-%d %H:%M:%S')
+            date_end = datetime.strptime(args.get("date_end"), '%Y-%m-%d %H:%M:%S')
+            if date_started > date_end:
+                return {"error_message": f"date Started {date_started} is bigger than date End {date_end}, that's not possible!"}
+        except ValueError:
+            return {"error_message": f"date_started or date_ended aren't real dates or they don't exist!"}
 
     # restriccion 4: longitud y latitude en Catalunya y checkear Value Error
     try:
@@ -225,7 +228,8 @@ def check_atributes(args):
         return {"error_message": "longitud or latitude aren't floats!"}
 
     # restriccion 5: date started deberia ser ahora mismo o en el futuro
-    if date_started < datetime.now():
+    if type != "modify":
+      if date_started < datetime.now():
         return {"error_message": f"date Started {date_started} es antes de ahora mismo, ha comenzado ya?"}
 
     # restriccion 6: atributo description es mas grande que 250 characters
@@ -248,8 +252,6 @@ def check_atributes(args):
     if len(args.get("event_image_uri")) != 0:
         if not validators.url(args.get("event_image_uri")):
             return {"error_message": "la imagen del evento no es una URL valida"}
-
-    # TODO restriccion 10: mirar si la imagen es una imagen vulgar
 
     return {"error_message": "all good"}
 
@@ -276,8 +278,6 @@ def join_event(id):
 
     if event is None:
         return jsonify({"error_message": f"El evento {event_id} no existe en la BD"}), 400
-
-    # TODO Mirar si el user puede unirse al evento (tema banear)
 
     try:
         args = request.json
@@ -308,6 +308,11 @@ def join_event(id):
     if len(num_participants) >= event.max_participants:
         return jsonify({"error_message": f"El evento {event_id} ya esta lleno!"}), 400
 
+    # restriccion: el evento ya esta pasado
+    current_date = datetime.now() + timedelta(hours=2)
+    if event.date_end <= current_date:
+        return jsonify({"error_message": f"El evento {event_id} ya ha acabado!"}), 400
+
     participant = Participant(event_id, user_id)
 
     # Errores al guardar en la base de datos: FK violated, etc
@@ -317,6 +322,14 @@ def join_event(id):
         return jsonify({"error_message": f"FK violated, el usuario {user_id} ya se ha unido al evento o no esta definido en la BD"}), 400
     except:
         return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
+
+    # Si es un evento con contaminacion baja, se añade uno al achievement Social bug
+    cont_level, cont_status = general_quality_at_a_point(event.longitud, event.latitude)
+    if cont_status == 200:
+        # Si es un evento con poca contaminacion, suma achievement Social Bug
+        contaminacion = json.loads(cont_level.response[0])
+        if contaminacion["pollution"] < 0.15:
+            increment_achievement_of_user("social_bug",user_id)
 
     return jsonify({"message": f"el usuario {user_id} se han unido CON EXITO"}), 200
 
@@ -433,9 +446,22 @@ def get_event(id):
 
     try:
         event = Event.query.get(event_id)
-        return jsonify(event.toJSON()), 200
     except:
         return jsonify({"error_message": f"The event {event_id} doesn't exist"}), 400
+
+    # Si es un evento con contaminacion baja, se añade uno al achievement Healthy Curiosity
+    cont_level, cont_status = general_quality_at_a_point(event.longitud, event.latitude)
+    if cont_status == 200:
+        # Si es un evento con poca contaminacion, suma achievement Social Bug
+        contaminacion = json.loads(cont_level.response[0])
+        if contaminacion["pollution"] < 0.15:
+            auth_id = get_jwt_identity()
+            try:
+                increment_achievement_of_user("healthy_curiosity", auth_id)
+            except:
+                return jsonify({"error_message": f"Error adding an achievement"}), 400
+
+    return jsonify(event.toJSON()), 200
 
 
 # OBTENER EVENTOS POR USUARIO CREADOR method: devuelve todos los eventos creados por un usuario
@@ -499,9 +525,9 @@ def delete_event(id):
     if event is None:
         return jsonify({"error_message": f"The event {event_id} doesn't exist"}), 400
 
-    # restricion: solo el usuario creador puede eliminar su evento (mirando Bearer Token)
+    # restricion: solo el usuario creador puede eliminar su evento (o un admin) (mirando Bearer Token)
     auth_id = get_jwt_identity()
-    if str(event.user_creator) != auth_id:
+    if str(event.user_creator) != auth_id and not Admin.exists(auth_id):
         return jsonify({"error_message": "A user cannot delete events if they are not the creator"}), 403
 
     # Eliminar todos los participantes del evento ANTES DE ELIMINAR EL EVENTO
@@ -721,7 +747,7 @@ def get_past_evento():
 
     # if events_of_participant is None, it means that the user doesn't participate in any event
     events_of_participant = Participant.query.filter_by(user_id=user_id)
-    
+
     # La data de ahora es en GMT+2 por lo tanto tenemos que sumar dos horas en el tiempo actual
     current_date = datetime.now() + timedelta(hours=2)
     past_events = []        
@@ -729,8 +755,10 @@ def get_past_evento():
     for ev in events_of_participant:
         try:
             the_event = Event.query.get(ev.event_id)
-            if the_event.date_end <= current_date:
-                past_events.append(the_event)
+            # eventos de un participantes NO INCLUYEN tus eventos
+            if the_event.user_creator != user_id:
+                if the_event.date_end <= current_date:
+                    past_events.append(the_event)
         except:
             return jsonify({"error_message": "Error when querying events"}), 400
 
@@ -932,7 +960,7 @@ def get_likes_from_user(iduser, idevento):
 def get_top_ten_events():
     db_uri = current_app.config.get('SQLALCHEMY_DATABASE_URI')
     engine = create_engine(db_uri)
-    sql_query = db.text("select e.id, e.name, e.description, e.date_started, e.date_end, e.date_creation, e.user_creator, e.longitud, e.latitude, e.max_participants, e.date_creation, e.event_image_uri from events e left join likes l on e.id = l.event_id where e.date_end >= CURRENT_TIMESTAMP group by e.id order by count(distinct l.user_id) desc limit 10;")
+    sql_query = db.text("select e.id, e.name, e.description, e.date_started, e.date_end, e.date_creation, e.user_creator, e.longitud, e.latitude, e.max_participants, e.event_image_uri from events e left join likes l on e.id = l.event_id where e.date_end >= CURRENT_TIMESTAMP group by e.id order by count(distinct l.user_id) desc limit 10;")
     with engine.connect() as conn:
         result_as_list = conn.execute(sql_query).fetchall() 
 
@@ -960,7 +988,7 @@ def dataToJSON(data):
 
 ########################################################################### R E V I E W S ##################################################################
 
-# CREAR UNA REVIEW: crear una review de un evento
+# CREAR REVIEW: crear una review de un evento
 @module_event_v3.route('/review', methods=['POST'])
 # DEVUELVE:
 # - 400 o 403: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
@@ -1048,6 +1076,9 @@ def crear_review():
     except:
         return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
 
+    # Si es la primera review de un usuario, darle el logro feedback monster
+    increment_achievement_of_user("feedback_monster", user_id)
+
     # Devolver nueva review en formato JSON si todo ha funcionado correctamente
     ratingJSON = new_rating.toJSON()
     return jsonify(ratingJSON), 201
@@ -1078,6 +1109,8 @@ def get_reviews_evento():
     if event is None:
         return jsonify({"error_message": f"Event {event_id} doesn't exist"}), 400
     
+    user = User.query.filter_by(id = event.user_creator).first()
+    
     try:
         reviews = Review.query.filter_by(event_id=event_id)
     except:
@@ -1088,4 +1121,4 @@ def get_reviews_evento():
     for r in reviews:
         review_list.append(r)
 
-    return jsonify([review.toJSON() for review in reviews]), 200
+    return jsonify({'event': event.toJSON(), 'username': user.username, 'email': user.email, 'reviews': [review.toJSON() for review in reviews]}), 200
