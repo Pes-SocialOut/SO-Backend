@@ -71,7 +71,6 @@ ruamel.yaml==0.15.100
 six==1.16.0
 soupsieve==2.3.2.post1
 SQLAlchemy==1.4.32
-srsly==1.0.5
 thinc==7.4.5
 tomlkit==0.5.11
 tqdm==4.64.0
