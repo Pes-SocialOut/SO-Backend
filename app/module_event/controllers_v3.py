@@ -95,9 +95,9 @@ def create_event():
    # TODO Añadir evento al calendario del creador
 
     #auth_id = get_jwt_identity()
-    auth_id = "ya29.a0ARrdaM99ZqlnV7u_IYRkbA6QjYmK7I8AbMNud4-GJRQQnFY-O8flULYrHh7hzxD-y84qewstJv3rzkiY16mvqdjSwAP4RUOO5wi9Yrvu4Asos0amdgn7j20lse0YYxfcmRZbi-0vy5kfT24_yDU7p1c2OpSq2Q"
+    auth_id = "ya29.a0ARrdaM8yuBz8zlr4SaWpxV39Z-80jwROwOaisqSAWQjOQddSx7dlK2diksCazQANU8JlZHBlHi99MWc3Gr6HexgepljLikE4s-5mtvd2yMNc_PVQqPu91Defpz_QCJKmFmMhNLymP5MsSotDYTVlp9qK0bVX"
     #user = GoogleAuth.query.filter_by(id=auth_id).first()
-    crearEvento(auth_id, "maybe va ;)", "esto es un evento de prueba", 41.3713, 2.1494, '2022-05-10T09:00:00','2022-05-10T10:00:00')
+    crearEvento(auth_id, "random guillem", "esto es un evento de prueba", 41.3713, 2.1494, '2022-05-10T09:00:00','2022-05-10T10:00:00')
     #crearEvento(auth_id, event.name, event.description, event.latitude, event.longitud, str(event.date_started), str(event.date_end))
 
     eventJSON = event.toJSON()

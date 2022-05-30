@@ -1,4 +1,4 @@
-from quickstart import get_calendar_service
+from app.module_calendar.quickstart import get_calendar_service
 from geopy.geocoders import Nominatim
 
 
