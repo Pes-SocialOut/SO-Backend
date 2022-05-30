@@ -558,7 +558,9 @@ def login_google():
         return jsonify({'error_message': 'User does not exist'}), 400 
     google_auth = GoogleAuth.query.filter_by(id = user.id).first()
     if google_auth == None:
-        return jsonify({'error_message': 'Authentication method not available for this email'}), 400 
+        return jsonify({'error_message': 'Authentication method not available for this email'}), 400
+    google_auth.access_token = token
+    google_auth.save()
     return generate_tokens(str(user.id)), 200
 
 @module_users_v1.route('/login/facebook', methods=['POST'])
@@ -577,7 +579,9 @@ def login_facebook():
         return jsonify({'error_message': 'User does not exist'}), 400 
     facebook_auth = FacebookAuth.query.filter_by(id = user.id).first()
     if facebook_auth == None:
-        return jsonify({'error_message': 'Authentication method not available for this email'}), 400 
+        return jsonify({'error_message': 'Authentication method not available for this email'}), 400
+    facebook_auth.access_token = token
+    facebook_auth.save()
     return generate_tokens(str(user.id)), 200
 
 @module_users_v1.route('/refresh', methods=['GET'])

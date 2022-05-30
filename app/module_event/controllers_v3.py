@@ -3,6 +3,7 @@
 import sqlalchemy
 from app.module_event.models import Event, Participant, Like, Review
 from app.module_users.models import User
+from app.module_admin.models import Admin
 from app.module_airservice.controllers import general_quality_at_a_point
 from app.module_users.utils import increment_achievement_of_user
 
@@ -509,9 +510,9 @@ def delete_event(id):
     if event is None:
         return jsonify({"error_message": f"The event {event_id} doesn't exist"}), 400
 
-    # restricion: solo el usuario creador puede eliminar su evento (mirando Bearer Token)
+    # restricion: solo el usuario creador puede eliminar su evento (o un admin) (mirando Bearer Token)
     auth_id = get_jwt_identity()
-    if str(event.user_creator) != auth_id:
+    if str(event.user_creator) != auth_id and not Admin.exists(auth_id):
         return jsonify({"error_message": "A user cannot delete events if they are not the creator"}), 403
 
     # Eliminar todos los participantes del evento ANTES DE ELIMINAR EL EVENTO
