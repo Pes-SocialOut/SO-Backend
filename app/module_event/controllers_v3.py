@@ -16,8 +16,6 @@ import uuid
 import validators
 import json
 
-from app.module_calendar.functions_calendar import crearEvento
-
 # Import the database object from the main app module
 from app import db
 
@@ -91,14 +89,6 @@ def create_event():
         return jsonify({"error_message": "FK violated"}), 400
     except:
         return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
-
-   # TODO Añadir evento al calendario del creador
-
-    #auth_id = get_jwt_identity()
-    auth_id = "ya29.a0ARrdaM8yuBz8zlr4SaWpxV39Z-80jwROwOaisqSAWQjOQddSx7dlK2diksCazQANU8JlZHBlHi99MWc3Gr6HexgepljLikE4s-5mtvd2yMNc_PVQqPu91Defpz_QCJKmFmMhNLymP5MsSotDYTVlp9qK0bVX"
-    #user = GoogleAuth.query.filter_by(id=auth_id).first()
-    crearEvento(auth_id, "random guillem", "esto es un evento de prueba", 41.3713, 2.1494, '2022-05-10T09:00:00','2022-05-10T10:00:00')
-    #crearEvento(auth_id, event.name, event.description, event.latitude, event.longitud, str(event.date_started), str(event.date_end))
 
     eventJSON = event.toJSON()
     return jsonify(eventJSON), 201
