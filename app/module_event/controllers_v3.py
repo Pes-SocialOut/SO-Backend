@@ -47,7 +47,7 @@ def create_event():
 
     event_uuid = uuid.uuid4()
 
-    response = check_atributes(args)
+    response = check_atributes(args, "create")
     if (response['error_message'] != "all good"):
         return jsonify(response), 400
 
@@ -122,7 +122,7 @@ def modify_events_v2(id):
         return jsonify({"error_message": f"El evento {event_id} no existe"}), 400
 
     # Comprobar atributos de JSON para ver si estan bien
-    response = check_atributes(args)
+    response = check_atributes(args, "modify")
     if (response['error_message'] != "all good"):
         return jsonify(response), 400
 
@@ -137,10 +137,6 @@ def modify_events_v2(id):
 
     event.name = args.get("name")
     event.description = args.get("description")
-    event.date_started = datetime.strptime(
-        args.get("date_started"), '%Y-%m-%d %H:%M:%S')
-    event.date_end = datetime.strptime(
-        args.get("date_end"), '%Y-%m-%d %H:%M:%S')
     event.longitud = float(args.get("longitud"))
     event.latitude = float(args.get("latitude"))
     event.max_participants = int(args.get("max_participants"))
@@ -159,16 +155,17 @@ def modify_events_v2(id):
 
 # Metodo para comprobar los atributos pasados de un evento a crear o modificat (POST o PUT)
 # Devuelve: Diccionario con un mensaje de error o un mensaje de todo bien
-def check_atributes(args):
+def check_atributes(args, type):
     # restriccion 0: Mirar si los atributos estan en el body
     if args.get("name") is None:
         return {"error_message": "atributo name no esta en el body o es null"}
     if args.get("description") is None:
         return {"error_message": "atributo description no esta en el body o es null"}
-    if args.get("date_started") is None:
-        return {"error_message": "atributo date_started no esta en la URL o es null"}
-    if args.get("date_end") is None:
-        return {"error_message": "atributo date_end no esta en la URL o es null"}
+    if type != "modify":
+        if args.get("date_started") is None:
+            return {"error_message": "atributo date_started no esta en la URL o es null"}
+        if args.get("date_end") is None:
+            return {"error_message": "atributo date_end no esta en la URL o es null"}
     if args.get("user_creator") is None:
         return {"error_message": "atributo user_creator no esta en la URL o es null"}
     if args.get("longitud") is None:
@@ -200,14 +197,15 @@ def check_atributes(args):
         return {"error_message": "name, description or user_creator is empty!"}
 
     # restriccion 3: date started es mas grande que end date del evento (format -> 2015-06-05 10:20:10) y Comprobar Value Error
-    try:
-        date_started = datetime.strptime(
-            args.get("date_started"), '%Y-%m-%d %H:%M:%S')
-        date_end = datetime.strptime(args.get("date_end"), '%Y-%m-%d %H:%M:%S')
-        if date_started > date_end:
-            return {"error_message": f"date Started {date_started} is bigger than date End {date_end}, that's not possible!"}
-    except ValueError:
-        return {"error_message": f"date_started or date_ended aren't real dates or they don't exist!"}
+    if type != "modify":
+        try:
+            date_started = datetime.strptime(
+                args.get("date_started"), '%Y-%m-%d %H:%M:%S')
+            date_end = datetime.strptime(args.get("date_end"), '%Y-%m-%d %H:%M:%S')
+            if date_started > date_end:
+                return {"error_message": f"date Started {date_started} is bigger than date End {date_end}, that's not possible!"}
+        except ValueError:
+            return {"error_message": f"date_started or date_ended aren't real dates or they don't exist!"}
 
     # restriccion 4: longitud y latitude en Catalunya y checkear Value Error
     try:
@@ -219,7 +217,8 @@ def check_atributes(args):
         return {"error_message": "longitud or latitude aren't floats!"}
 
     # restriccion 5: date started deberia ser ahora mismo o en el futuro
-    if date_started < datetime.now():
+    if type != "modify":
+      if date_started < datetime.now():
         return {"error_message": f"date Started {date_started} es antes de ahora mismo, ha comenzado ya?"}
 
     # restriccion 6: atributo description es mas grande que 250 characters
@@ -242,8 +241,6 @@ def check_atributes(args):
     if len(args.get("event_image_uri")) != 0:
         if not validators.url(args.get("event_image_uri")):
             return {"error_message": "la imagen del evento no es una URL valida"}
-
-    # TODO restriccion 10: mirar si la imagen es una imagen vulgar
 
     return {"error_message": "all good"}
 
@@ -736,6 +733,7 @@ def get_past_evento():
     events_of_participant = Participant.query.filter_by(user_id=user_id)
 
     # TODO eventos de un participantes NO INCLUYEN tus eventos
+    
 
     # La data de ahora es en GMT+2 por lo tanto tenemos que sumar dos horas en el tiempo actual
     current_date = datetime.now() + timedelta(hours=2)
