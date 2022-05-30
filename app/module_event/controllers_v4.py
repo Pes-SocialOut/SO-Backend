@@ -103,7 +103,8 @@ def create_event():
     #crearEvento(user, "random guillem", "esto es un evento de prueba", 41.3713, 2.1494, '2022-05-10T09:00:00','2022-05-10T10:00:00')
 
     eventJSON = event.toJSON()
-    return jsonify(eventJSON, user, auth_id), 201
+    testing = {"auth_id": auth_id, "user": user}
+    return jsonify(testing), 201
 
 
 # MODIFICAR EVENTO: Modifica la información de un evento
