@@ -347,12 +347,14 @@ def join_event(id):
             increment_achievement_of_user("social_bug",user_id)
 
     # Se crea un chat entre el participante y el creador
-    crear_chat_back(event.id, user_id)
+    err, sts = crear_chat_back(event.id, user_id)
+    if sts != 201:
+        return err, 500
 
     # Añadir evento al calendario del usuario
     auth_id = uuid.UUID(get_jwt_identity())
     user = GoogleAuth.query.filter_by(id=auth_id).first()
-    #token_victor = "ya29.a0ARrdaM8yuBz8zlr4SaWpxV39Z-80jwROwOaisqSAWQjOQddSx7dlK2diksCazQANU8JlZHBlHi99MWc3Gr6HexgepljLikE4s-5mtvd2yMNc_PVQqPu91Defpz_QCJKmFmMhNLymP5MsSotDYTVlp9qK0bVX"
+    
     if user is not None:
         date_started_formatted = event.date_started.strftime("%Y-%m-%dT%H:%M:%S")
         date_end_formatted = event.date_end.strftime("%Y-%m-%dT%H:%M:%S")
