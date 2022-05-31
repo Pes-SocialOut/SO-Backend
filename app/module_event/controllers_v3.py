@@ -7,7 +7,7 @@ from app.module_admin.models import Admin
 from app.module_airservice.controllers import general_quality_at_a_point
 from app.module_users.utils import increment_achievement_of_user
 
-from app.module_chat.controllers import crear_chat_back
+from app.module_chat.controllers import crear_chat_back, borrar_mensajes_participante, borrar_mensajes_evento
 
 from profanityfilter import ProfanityFilter
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -384,6 +384,9 @@ def leave_event(id):
         return jsonify({"error_message":
                         f"El usuario {user_id} es el creador del evento (no puede abandonar)"}), 400
 
+    # Eliminar Chat
+    borrar_mensajes_participante(event_id_b=event_id, participant_id_b=participant.user_id)
+
     # Errores al guardar en la base de datos: FK violated, etc
     try:
         participant.delete()
@@ -562,6 +565,9 @@ def delete_event(id):
             r.delete()
         except:
             return jsonify({"error_message": "error while deleting reviews of an event"}), 400
+
+    # Eliminar chat
+    borrar_mensajes_evento(event.id)
 
     try:
         event.delete()
