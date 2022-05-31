@@ -8,6 +8,8 @@ from app.module_airservice.controllers import general_quality_at_a_point
 from app.module_users.utils import increment_achievement_of_user
 
 from app.module_chat.controllers import crear_chat_back, borrar_mensajes_participante, borrar_mensajes_evento
+from app.module_calendar.functions_calendar import crearEvento, eliminarEventoTitle, editarEventoTitle, editarEventoDesciption
+
 
 from profanityfilter import ProfanityFilter
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -92,6 +94,16 @@ def create_event():
     except:
         return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
 
+    # Añadir evento al calendario del creador
+    auth_id = uuid.UUID(get_jwt_identity())
+    user = GoogleAuth.query.filter_by(id=auth_id).first()
+    #token_victor = "ya29.a0ARrdaM8yuBz8zlr4SaWpxV39Z-80jwROwOaisqSAWQjOQddSx7dlK2diksCazQANU8JlZHBlHi99MWc3Gr6HexgepljLikE4s-5mtvd2yMNc_PVQqPu91Defpz_QCJKmFmMhNLymP5MsSotDYTVlp9qK0bVX"
+    if user is not None:
+        date_started_formatted = event.date_started.strftime("%Y-%m-%dT%H:%M:%S")
+        date_end_formatted = event.date_end.strftime("%Y-%m-%dT%H:%M:%S")
+        crearEvento(user.access_token, event.name, event.description, event.latitude, event.longitud, date_started_formatted, date_end_formatted)
+    
+
     eventJSON = event.toJSON()
     return jsonify(eventJSON), 201
 
@@ -139,6 +151,15 @@ def modify_events_v2(id):
     auth_id = get_jwt_identity()
     if str(event.user_creator) != auth_id:
         return jsonify({"error_message": "A user cannot update the events of others"}), 403
+
+    # Cambiar el calendario si el modify es correcto
+    auth_id = uuid.UUID(get_jwt_identity())
+    user = GoogleAuth.query.filter_by(id=auth_id).first()
+    #token_victor = "ya29.a0ARrdaM8yuBz8zlr4SaWpxV39Z-80jwROwOaisqSAWQjOQddSx7dlK2diksCazQANU8JlZHBlHi99MWc3Gr6HexgepljLikE4s-5mtvd2yMNc_PVQqPu91Defpz_QCJKmFmMhNLymP5MsSotDYTVlp9qK0bVX"
+    if user is not None:
+        editarEventoDesciption(user.access_token, str(event.name), str(args.get("description")))
+        editarEventoTitle(user.access_token, str(event.name), str(args.get("name")))
+    
 
     event.name = args.get("name")
     event.description = args.get("description")
@@ -328,6 +349,17 @@ def join_event(id):
     # Se crea un chat entre el participante y el creador
     crear_chat_back(event.id, user_id)
 
+    # Añadir evento al calendario del usuario
+    auth_id = uuid.UUID(get_jwt_identity())
+    user = GoogleAuth.query.filter_by(id=auth_id).first()
+    #token_victor = "ya29.a0ARrdaM8yuBz8zlr4SaWpxV39Z-80jwROwOaisqSAWQjOQddSx7dlK2diksCazQANU8JlZHBlHi99MWc3Gr6HexgepljLikE4s-5mtvd2yMNc_PVQqPu91Defpz_QCJKmFmMhNLymP5MsSotDYTVlp9qK0bVX"
+    if user is not None:
+        date_started_formatted = event.date_started.strftime("%Y-%m-%dT%H:%M:%S")
+        date_end_formatted = event.date_end.strftime("%Y-%m-%dT%H:%M:%S")
+        crearEvento(user.access_token, event.name, event.description, event.latitude, event.longitud, date_started_formatted, date_end_formatted)    
+
+
+
     return jsonify({"message": f"el usuario {user_id} se han unido CON EXITO"}), 200
 
 
@@ -386,6 +418,13 @@ def leave_event(id):
 
     # Eliminar Chat
     borrar_mensajes_participante(event_id_b=event_id, participant_id_b=participant.user_id)
+
+    # Eliminar el evento del calendario
+    auth_id = uuid.UUID(get_jwt_identity())
+    user = GoogleAuth.query.filter_by(id=auth_id).first()
+    #token_victor = "ya29.a0ARrdaM8yuBz8zlr4SaWpxV39Z-80jwROwOaisqSAWQjOQddSx7dlK2diksCazQANU8JlZHBlHi99MWc3Gr6HexgepljLikE4s-5mtvd2yMNc_PVQqPu91Defpz_QCJKmFmMhNLymP5MsSotDYTVlp9qK0bVX"
+    if user is not None:
+        eliminarEventoTitle(user.access_token, event.name)
 
     # Errores al guardar en la base de datos: FK violated, etc
     try:
@@ -568,6 +607,13 @@ def delete_event(id):
 
     # Eliminar chat
     borrar_mensajes_evento(event.id)
+
+    # Eliminar el evento del calendario
+    auth_id = uuid.UUID(get_jwt_identity())
+    user = GoogleAuth.query.filter_by(id=auth_id).first()
+    if user is not None:
+        eliminarEventoTitle(user.access_token, event.name)
+
 
     try:
         event.delete()
