@@ -7,6 +7,8 @@ from app.module_admin.models import Admin
 from app.module_airservice.controllers import general_quality_at_a_point
 from app.module_users.utils import increment_achievement_of_user
 
+from app.module_chat.controllers import crear_chat_back
+
 from profanityfilter import ProfanityFilter
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from datetime import datetime, timedelta
@@ -322,6 +324,9 @@ def join_event(id):
         contaminacion = json.loads(cont_level.response[0])
         if contaminacion["pollution"] < 0.15:
             increment_achievement_of_user("social_bug",user_id)
+
+    # Se crea un chat entre el participante y el creador
+    crear_chat_back(event.id, user_id)
 
     return jsonify({"message": f"el usuario {user_id} se han unido CON EXITO"}), 200
 
