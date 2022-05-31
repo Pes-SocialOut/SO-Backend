@@ -26,7 +26,7 @@ def fetch_air_data(engine) -> list:
 
     with engine.connect() as conn:
         air_data = conn.execute(
-            'SELECT aqs.eoi_code, aqs.longitude, aqs.latitude, sum( aqd.contaminant_scale*p.air_quality_weight ) / sum(p.air_quality_weight) \
+            'SELECT aqs.eoi_code, aqs.longitude, aqs.latitude, 0.65*max(aqd.contaminant_scale) + 0.35*(sum( aqd.contaminant_scale*p.air_quality_weight ) / sum(p.air_quality_weight)) \
             FROM air_quality_data aqd inner join air_quality_station aqs on aqd.station_eoi_code = aqs.eoi_code \
                 inner join pollutant p on aqd.pollutant_composition = p.composition \
             WHERE aqd.date_hour = %s \
@@ -120,4 +120,4 @@ def main(db_uri):
     save_current_triangulation(triangulation, air_data, engine)
 
 if __name__ == '__main__':
-    main(os.getenv("SQLALCHEMY_DATABASE_URI"))
+    main(os.getenv("SQLALCHEMY_DATABASE_URL"))

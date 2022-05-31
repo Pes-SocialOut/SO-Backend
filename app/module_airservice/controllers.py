@@ -14,6 +14,12 @@ from datetime import timedelta
 # Import pickle library to save python objects to file
 import pickle as pkl
 
+# Import modules for machine learning
+import _pickle as cPickle
+import bz2
+import pandas as pd
+
+
 # Define the blueprint: 'air', set its url prefix: app.url/air
 module_airservice_v1 = Blueprint('air', __name__, url_prefix='/v1/air')
 
@@ -52,16 +58,17 @@ def get_all_air_stations_id_name_location_pollution():
 
 
 @module_airservice_v1.route('/location', methods=['GET'])
-def general_quality_at_a_point():
+def general_quality_at_a_point_aux():
     if not (request.args.get('long') and request.args.get('lat')):
         return jsonify({"error_message":"Must contain a point defined by query parameters <long> and <lat>"}), 400
-    
     try:
         long = float(request.args.get('long'))
         lat = float(request.args.get('lat'))
     except ValueError:
         return jsonify({"error_message":"<long> and <lat> query parameters must be of type float"}), 400
+    return general_quality_at_a_point(long, lat)
 
+def general_quality_at_a_point(long, lat):
     try:
         tri_query_result = triangulation_cache.query.first()
         triangulation_data = pkl.loads(tri_query_result.tri_object_bytes)
@@ -139,3 +146,104 @@ def general_quality_at_multiple_points():
 
         response.append({'ref_id': ref_id, 'pollution': general_quality})
     return jsonify({'triangulation_last_calculated_at': triangulation_upd_time, 'points': response}), 200
+
+#machine learning
+@module_airservice_v1.route('/ml', methods=['GET'])
+def machine_learning():
+    tipus_estacio_mapping = {"peri-urban": 3.0, "background": 0.0, "industrial": 1.0, "traffic": 2.0}
+    area_urbana_mapping = {"rural": 0.0, "suburban": 1.0, "urban": 2.0}
+    
+    try:
+        codi_eoi1 = float(request.args.get('codi_eoi1'))
+        contaminant1 = float(request.args.get('contaminante1'))
+        codi_eoi2 = float(request.args.get('codi_eoi2'))
+        contaminant2 = float(request.args.get('contaminante2'))
+        if request.args.get("codi_eoi3") is not None:
+            codi_eoi3 = float(request.args.get('codi_eoi3'))
+            contaminant3 = float(request.args.get('contaminante3'))
+        dia = float(request.args.get('dia'))
+        mes = float(request.args.get('mes'))
+        year = float(request.args.get('year'))
+        hora = float(request.args.get('hora'))
+        latitud = float(request.args.get('latitud'))
+        longitud = float(request.args.get('longitud'))
+        filename = 'app/module_airservice/finalized_model.pbz2'
+        loaded_model = cPickle.load(bz2.BZ2File(filename, 'rb'))
+    except ValueError:
+        return jsonify({"error_message":"Bad query params"}), 400
+
+    try:
+        if request.args.get("codi_eoi1") is not None:
+            query_result1 = air_quality_station.query.filter_by(eoi_code = request.args.get('codi_eoi1')).first()
+            query_result1json = query_result1.toJSON()
+            if query_result1 == None:
+                return jsonify({"error_message":f"Station with eoi_code {request.args.get('codi_eoi1')} is not registered"}), 404
+            pred1 = {"CODI EOI": codi_eoi1, 
+            "CONTAMINANT": contaminant1, 
+            "TIPUS ESTACIO": tipus_estacio_mapping[query_result1json["station_type"]] , 
+            "AREA URBANA" :area_urbana_mapping[query_result1json["urban_area"]], 
+            "CODI INE": str(codi_eoi1)[0:4] , 
+            "CODI COMARCA": query_result1.codi_comarca , 
+            "ALTITUD": query_result1.altitude , 
+            "LATITUD": query_result1.latitude , 
+            "LONGITUD": query_result1.longitude , 
+            "Dia": dia, 
+            "Mes": mes, 
+            "Año": year, 
+            "Hora": hora }
+            pred1Ser = pd.Series(data=pred1, index=["CODI EOI", "CONTAMINANT", "TIPUS ESTACIO", "AREA URBANA" , "CODI INE", "CODI COMARCA", "ALTITUD", "LATITUD", "LONGITUD", "Dia", "Mes", "Año", "Hora" ])
+            prediction1 = float(loaded_model.predict([pred1Ser]))
+
+        if request.args.get("codi_eoi2") is not None:
+            query_result2 = air_quality_station.query.filter_by(eoi_code = request.args.get('codi_eoi2')).first()
+            query_result2json = query_result2.toJSON()
+            if query_result2 == None:
+                return jsonify({"error_message":f"Station with eoi_code {request.args.get('codi_eoi2')} is not registered"}), 404
+            pred2 = {"CODI EOI": codi_eoi2, 
+            "CONTAMINANT": contaminant2, 
+            "TIPUS ESTACIO": tipus_estacio_mapping[query_result2json["station_type"]] , 
+            "AREA URBANA" :area_urbana_mapping[query_result2json["urban_area"]], 
+            "CODI INE": str(codi_eoi2)[0:4] , 
+            "CODI COMARCA": query_result2.codi_comarca , 
+            "ALTITUD": query_result2.altitude , 
+            "LATITUD": query_result2.latitude , 
+            "LONGITUD": query_result2.longitude , 
+            "Dia": dia, 
+            "Mes": mes, 
+            "Año": year, 
+            "Hora": hora }
+            pred2Ser = pd.Series(data=pred2, index=["CODI EOI", "CONTAMINANT", "TIPUS ESTACIO", "AREA URBANA" , "CODI INE", "CODI COMARCA", "ALTITUD", "LATITUD", "LONGITUD", "Dia", "Mes", "Año", "Hora" ])
+            prediction2 = float(loaded_model.predict([pred2Ser]))
+        if request.args.get("codi_eoi3") is not None:    
+            query_result3 = air_quality_station.query.filter_by(eoi_code = request.args.get('codi_eoi3')).first()
+            query_result3json = query_result3.toJSON()
+            if query_result3 == None:
+                return jsonify({"rror_message":f"Station with eoi_code {request.args.get('codi_eoi3')} is not registered"}), 404
+            pred3 = {"CODI EOI": codi_eoi3, 
+            "CONTAMINANT": contaminant3, 
+            "TIPUS ESTACIO": tipus_estacio_mapping[query_result3json["station_type"]] , 
+            "AREA URBANA" :area_urbana_mapping[query_result3json["urban_area"]], 
+            "CODI INE": str(codi_eoi3)[0:4] , 
+            "CODI COMARCA": query_result3.codi_comarca , 
+            "ALTITUD": query_result3.altitude , 
+            "LATITUD": query_result3.latitude , 
+            "LONGITUD": query_result3.longitude , 
+            "Dia": dia, 
+            "Mes": mes, 
+            "Año": year, 
+            "Hora": hora }
+            pred3Ser = pd.Series(data=pred3, index=["CODI EOI", "CONTAMINANT", "TIPUS ESTACIO", "AREA URBANA" , "CODI INE", "CODI COMARCA", "ALTITUD", "LATITUD", "LONGITUD", "Dia", "Mes", "Año", "Hora" ])
+            prediction3 = float(loaded_model.predict([pred3Ser]))
+         
+    except ValueError:
+        return jsonify({"not stations"}), 400
+
+    if (request.args.get("codi_eoi3") is not None and request.args.get("codi_eoi2") is not None and request.args.get("codi_eoi1") is not None):
+        w0, w1, w2 = barycentric_interpolation(query_result1.longitude, query_result1.latitude, query_result2.longitude, query_result2.latitude, query_result3.longitude, query_result3.latitude, longitud, latitud)
+        general_quality = w0*prediction1 + w1*prediction2 + w2*prediction3
+    elif (request.args.get("codi_eoi3") is None) :
+        general_quality = (prediction1 + prediction2)/2
+    
+    response = jsonify({'pollution': general_quality, "accuracy": 0.8286334127981916})
+    response.status_code = 200
+    return response

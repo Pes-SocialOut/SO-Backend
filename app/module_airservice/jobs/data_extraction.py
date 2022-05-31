@@ -18,11 +18,11 @@ date_today = datetime.today()
 date_anterior = date_today - timedelta(days = 1)
 date_anterior = date_anterior.strftime('%Y-%m-%d')
 
-def insert_air_station(eoi_code, name, station_t, urban_a, altitude, latitude, longitude, engine) -> None:
+def insert_air_station(eoi_code, name, station_t, urban_a, altitude, latitude, longitude, codi_comarca, engine) -> None:
     with engine.connect() as conn:
         conn.execute(
-            'INSERT INTO air_quality_station VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)',
-            (name, eoi_code, station_t, urban_a, altitude, latitude, longitude, 0.0, date_today))
+            'INSERT INTO air_quality_station VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+            (name, eoi_code, station_t, urban_a, altitude, latitude, longitude, 0.0, date_today, codi_comarca))
 
 def normalizar(cont, valor) -> float:
     return valor/contaminantes[cont][0]
@@ -80,6 +80,7 @@ def main(db_uri):
                 int(medicion['altitud']),
                 float(medicion['latitud']),
                 float(medicion['longitud']),
+                float(medicion['codi_comarca']),
                 engine)
             estaciones_vistas.add(medicion['codi_eoi'])
         
@@ -100,4 +101,4 @@ def main(db_uri):
             return
 
 if __name__ == '__main__':
-    main(os.getenv("SQLALCHEMY_DATABASE_URI"))
+    main(os.getenv("SQLALCHEMY_DATABASE_URL"))

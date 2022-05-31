@@ -12,16 +12,13 @@ from app import db
 
 # Import the hashing object from the main app module
 from app import hashing
-import string
-import random
 
-# Import mailing libs
-import os
-import smtplib
-from email.message import EmailMessage
+# Import util functions
+from app.utils.email import send_email
+from app.module_users.utils import increment_achievement_of_user, user_id_for_email, authentication_methods_for_user_id, send_verification_code_to, generate_tokens, get_random_salt, verify_password_strength
 
 # Import module models
-from app.module_users.models import User, SocialOutAuth, GoogleAuth, FacebookAuth, EmailVerificationPendant, Friend, UserLanguage
+from app.module_users.models import User, SocialOutAuth, GoogleAuth, FacebookAuth, EmailVerificationPendant, Friend, UserLanguage, BannedEmails
 
 # Define the blueprint: 'users', set its url prefix: app.url/users
 module_users_v1 = Blueprint('users', __name__, url_prefix='/v1/users')
@@ -72,11 +69,14 @@ def update_profile(id):
     hobbies = request.json['hobbies']
 
     if len(languages) == 0 or any([l not in ['catalan', 'spanish', 'english'] for l in languages]):
-        return jsonify({'error_message': 'Languages must be as ubset of the following: {catalan, spanish, english}'}), 400
+        return jsonify({'error_message': 'Languages must be a subset of the following: {catalan, spanish, english}'}), 400
 
     user = User.query.filter_by(id = uuid.UUID(id)).first()
     if (user == None):
         return jsonify({'error_message': f'User does not exist for id {id}'}), 404
+    
+    if (len(description) > 180):
+        return jsonify({'error_message': f'Description is too long. No more than 180 characters allowed.'}), 400
 
     user.username = username
     user.description = description
@@ -86,6 +86,9 @@ def update_profile(id):
         user.save()
     except:
         return jsonify({'error_message': f'An error occured when updating user {id}'}), 500
+    
+    if len(description) > 120:
+        increment_achievement_of_user('storyteller', user.id)
 
     user_languages = UserLanguage.query.filter_by(user = user.id).all()
     for ul in user_languages:
@@ -149,7 +152,7 @@ def change_password(id):
     except:
         return jsonify({'error_message': f'Something went wrong when changing password for user {id}, {user_salt}, {new_pw}, {hashed_pw} .... {debug}'}), 500
 
-    user = User.query().filter_by(id = uuid.UUID(id)).first()
+    user = User.query.filter_by(id = uuid.UUID(id)).first()
     send_email(user.email, 'SocialOut password change notice!', f'Your password was recently changed, if it was not you, please log into your {user.username} account by clicking on "Forgot password" in the login screen.')
     return generate_tokens(str(user.id)), 200
 
@@ -172,6 +175,8 @@ def check_register_status_socialout(args):
     if 'email' not in args:
         return jsonify({'error_message': 'Socialout auth method must indicate an email'}), 400
     email = args['email']
+    if BannedEmails.exists(email):
+        return jsonify({'error_message': 'This email is banned'}), 409
     user_id = user_id_for_email(email)
     if user_id == None:
         send_verification_code_to(email)
@@ -194,6 +199,8 @@ def check_register_status_google(args):
         email = idinfo.json()['email']
     except:
         return jsonify({'error_message': 'Google token was invalid'}), 400
+    if BannedEmails.exists(email):
+        return jsonify({'error_message': 'This email is banned'}), 409
     user_id = user_id_for_email(email)
     if user_id == None:
         return jsonify({'action': 'continue'}), 200
@@ -213,6 +220,8 @@ def check_register_status_facebook(args):
         email = idinfo.json()['email']
     except:
         return jsonify({'error_message': 'Facebook token was invalid'}), 400
+    if BannedEmails.exists(email):
+        return jsonify({'error_message': 'This email is banned'}), 409
     user_id = user_id_for_email(email)
     if user_id == None:
         return jsonify({'action': 'continue'}), 200
@@ -249,7 +258,10 @@ def register_socialout():
     verification = request.json['verification']
     
     if len(languages) == 0 or any([l not in ['catalan', 'spanish', 'english'] for l in languages]):
-        return jsonify({'error_message': 'Languages must be as ubset of the following: {catalan, spanish, english}'}), 400
+        return jsonify({'error_message': 'Languages must be a subset of the following: {catalan, spanish, english}'}), 400
+
+    if BannedEmails.exists(email):
+        return jsonify({'error_message': 'This email is banned'}), 409
 
     # Check no other user exists with that email
     if user_id_for_email(email) != None:
@@ -265,6 +277,9 @@ def register_socialout():
         return jsonify({'error_message': 'Verification code was never sent to this email or the code has expired.'}), 400
     if db_verification.code != verification:
         return jsonify({'error_message': 'Verification code does not coincide with code sent to email'}), 400
+    
+    if (len(description) > 180):
+        return jsonify({'error_message': f'Description is too long. No more than 180 characters allowed.'}), 400
 
     # Add user to bd
     user_id = uuid.uuid4()
@@ -285,6 +300,12 @@ def register_socialout():
     user_salt = get_random_salt(15)
     hashed_pw = hashing.hash_value(pw, salt=user_salt)
     socialout_auth = SocialOutAuth(user_id, user_salt, hashed_pw)
+
+    # Increment achievement
+    if len(description) > 120:
+        increment_achievement_of_user('storyteller', user_id)
+    increment_achievement_of_user('credential_multiverse', user_id)
+
     try:
         socialout_auth.save()
     except:
@@ -315,7 +336,7 @@ def register_google():
     hobbies = request.json['hobbies']
     
     if len(languages) == 0 or any([l not in ['catalan', 'spanish', 'english'] for l in languages]):
-        return jsonify({'error_message': 'Languages must be as ubset of the following: {catalan, spanish, english}'}), 400
+        return jsonify({'error_message': 'Languages must be a subset of the following: {catalan, spanish, english}'}), 400
 
     # Get google email from token
     try:
@@ -325,9 +346,15 @@ def register_google():
     except:
         return jsonify({'error_message': 'Google token was invalid'}), 400
     
+    if BannedEmails.exists(email):
+        return jsonify({'error_message': 'This email is banned'}), 409
+    
     # Check no other user exists with that email
     if user_id_for_email(email) != None:
         return jsonify({'error_message': 'User with this email already exists'}), 400
+    
+    if (len(description) > 180):
+        return jsonify({'error_message': f'Description is too long. No more than 180 characters allowed.'}), 400
 
     # Add user to bd
     user_id = uuid.uuid4()
@@ -346,6 +373,12 @@ def register_google():
     
     # Add google auth method to user
     google_auth = GoogleAuth(user_id, token)
+
+    # Increment achievement
+    if len(description) > 120:
+        increment_achievement_of_user('storyteller', user_id)
+    increment_achievement_of_user('credential_multiverse', user_id)
+
     try:
         google_auth.save()
     except:
@@ -373,7 +406,7 @@ def register_facebook():
     hobbies = request.json['hobbies']
     
     if len(languages) == 0 or any([l not in ['catalan', 'spanish', 'english'] for l in languages]):
-        return jsonify({'error_message': 'Languages must be as ubset of the following: {catalan, spanish, english}'}), 400
+        return jsonify({'error_message': 'Languages must be a subset of the following: {catalan, spanish, english}'}), 400
 
     # Get email from facebook token
     try:
@@ -382,9 +415,15 @@ def register_facebook():
     except:
         return jsonify({'error_message': 'Google token was invalid'}), 400
     
+    if BannedEmails.exists(email):
+        return jsonify({'error_message': 'This email is banned'}), 409
+    
     # Check no other user exists with that email
     if user_id_for_email(email) != None:
         return jsonify({'error_message': 'User with this email already exists'}), 400
+
+    if (len(description) > 180):
+        return jsonify({'error_message': f'Description is too long. No more than 180 characters allowed.'}), 400
 
     # Add user to bd
     user_id = uuid.uuid4()
@@ -403,10 +442,16 @@ def register_facebook():
     
     # Add facebook auth method to user
     facebook_auth = FacebookAuth(user_id, token)
+
+    # Increment achievement
+    if len(description) > 120:
+        increment_achievement_of_user('storyteller', user_id)
+    increment_achievement_of_user('credential_multiverse', user_id)
+
     try:
         facebook_auth.save()
     except:
-        return jsonify({'error_message': 'Something went wrong when adding auth method google to user'}), 500
+        return jsonify({'error_message': 'Something went wrong when adding auth method facebook to user'}), 500
     
     return generate_tokens(str(user_id)), 200
 
@@ -513,7 +558,9 @@ def login_google():
         return jsonify({'error_message': 'User does not exist'}), 400 
     google_auth = GoogleAuth.query.filter_by(id = user.id).first()
     if google_auth == None:
-        return jsonify({'error_message': 'Authentication method not available for this email'}), 400 
+        return jsonify({'error_message': 'Authentication method not available for this email'}), 400
+    google_auth.access_token = token
+    google_auth.save()
     return generate_tokens(str(user.id)), 200
 
 @module_users_v1.route('/login/facebook', methods=['POST'])
@@ -532,7 +579,9 @@ def login_facebook():
         return jsonify({'error_message': 'User does not exist'}), 400 
     facebook_auth = FacebookAuth.query.filter_by(id = user.id).first()
     if facebook_auth == None:
-        return jsonify({'error_message': 'Authentication method not available for this email'}), 400 
+        return jsonify({'error_message': 'Authentication method not available for this email'}), 400
+    facebook_auth.access_token = token
+    facebook_auth.save()
     return generate_tokens(str(user.id)), 200
 
 @module_users_v1.route('/refresh', methods=['GET'])
@@ -591,6 +640,10 @@ def link_socialout_auth_method(args):
     user_salt = get_random_salt(15)
     hashed_pw = hashing.hash_value(password, salt=user_salt)
     socialout_auth = SocialOutAuth(user_id, user_salt, hashed_pw)
+
+    # Increment achievement
+    increment_achievement_of_user('credential_multiverse', user_id)
+
     try:
         socialout_auth.save()
     except:
@@ -625,6 +678,10 @@ def link_google_auth_method(args):
     
     # Add google auth method to user
     google_auth = GoogleAuth(user_id, token)
+
+    # Increment achievement
+    increment_achievement_of_user('credential_multiverse', user_id)
+
     try:
         google_auth.save()
     except:
@@ -655,6 +712,10 @@ def link_facebook_auth_method(args):
     
     # Add facebook auth method to user
     facebook_auth = FacebookAuth(user_id, token)
+
+    # Increment achievement
+    increment_achievement_of_user('credential_multiverse', user_id)
+
     try:
         facebook_auth.save()
     except:
@@ -662,69 +723,3 @@ def link_facebook_auth_method(args):
     
     return generate_tokens(str(user_id)), 200
 
-
-######################################### UTILITY FUNCTIONS #######################################
-
-def user_id_for_email(email):
-    user = User.query.filter_by(email = email).first()
-    if user == None:
-        return None
-    return user.id
-
-def authentication_methods_for_user_id(id):
-    result = []
-    socialout_auth = SocialOutAuth.query.filter_by(id = id).first()
-    if socialout_auth != None:
-        result.append('socialout')
-    google_auth = GoogleAuth.query.filter_by(id = id).first()
-    if google_auth != None:
-        result.append('google')
-    fb_auth = FacebookAuth.query.filter_by(id = id).first()
-    if fb_auth != None:
-        result.append('facebook')
-    return result
-
-def send_verification_code_to(email):
-    code = get_random_salt(6)
-    # Save code to database
-    db_verification = EmailVerificationPendant.query.filter_by(email = email).first()
-    if db_verification == None:
-        db_verification = EmailVerificationPendant(email, code, datetime.now(timezone.utc)+timedelta(minutes=15))
-        db_verification.save()
-    else:
-        db_verification.code = code
-        db_verification.expires_at = datetime.now(timezone.utc)+timedelta(minutes=15)
-        db.session.commit()
-    send_email(email, 'SocialOut auth verification code', f'Your verification code for SocialOut authentication is {code}. It expires in 15 minutes.')
-
-def send_email(email, subject, body):
-    EMAIL_ADRESS = os.getenv('MAIL_USERNAME')
-    EMAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
-    msg = EmailMessage()
-    msg['Subject'] = subject
-    msg['From'] = EMAIL_ADRESS
-    msg['To'] = email
-    msg.set_content(body)
-
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-        smtp.login(EMAIL_ADRESS, EMAIL_PASSWORD)
-        smtp.send_message(msg)
-
-def generate_tokens(user_id):
-    access_token = create_access_token(identity=user_id)
-    refresh_token = create_refresh_token(identity=user_id)
-    return jsonify(id=user_id,access_token=access_token, refresh_token=refresh_token)
-
-def get_random_salt(length):
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
-
-def verify_password_strength(pw):
-    if len(pw) < 8:
-        return jsonify({'error_message': 'New password must have a length of at least 8 characters'}), 400
-    if (sum(1 for c in pw if c.isupper()) == 0):
-        return jsonify({'error_message': 'New password must have at least one uppercase letter'}), 400
-    if (sum(1 for c in pw if c.islower()) == 0):
-        return jsonify({'error_message': 'New password must have at least one lowercase letter'}), 400
-    if (all([not c.isdigit() for c in pw])):
-        return jsonify({'error_message': 'New password must have at least one number digit'}), 400
-    return {}, 200
