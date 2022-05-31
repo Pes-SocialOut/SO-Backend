@@ -140,7 +140,7 @@ def machine_learning():
         return jsonify({"error_message":"Bad query params"}), 400
 
     try:
-        query_result1 = air_quality_station.query.filter_by(eoi_code = '43013002').first()
+        query_result1 = air_quality_station.query.filter_by(eoi_code = request.args.get('codi_eoi1')).first()
         query_result2 = air_quality_station.query.filter_by(eoi_code = request.args.get('codi_eoi2')).first()
         query_result3 = air_quality_station.query.filter_by(eoi_code = request.args.get('codi_eoi3')).first()
 
