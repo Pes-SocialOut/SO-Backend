@@ -16,7 +16,7 @@ import uuid
 import validators
 import json
 
-from app.module_calendar.functions_calendar import crearEvento, eliminarEventoID, eliminarEventoTitle, editarEventoTitle, editarEventoDesciption
+from app.module_calendar.functions_calendar import crearEvento, eliminarEventoTitle, editarEventoTitle, editarEventoDesciption
 
 # Import the database object from the main app module
 from app import db
@@ -94,15 +94,18 @@ def create_event():
     # Añadir evento al calendario del creador
     auth_id = uuid.UUID(get_jwt_identity())
     user = GoogleAuth.query.filter_by(id=auth_id).first()
-    token = "ya29.a0ARrdaM_HfB2QaKf9xxx57qmeKNGXK7RWieTnFHEHenpd3IjRBIcJZzWYfiDdXe0lQ1JEL0nilBC6Mmodkrd_0u843S1JahNumEdqPEndPcliCHtaPdl3eMW1WDgJXzSNxJuNxZqCzpj592G3MDDMjPJi4Jrh"
-    crearEvento(token, event.name, event.description, event.latitude, event.longitud, '2022-05-15T09:00:00','2022-05-16T10:00:00')
+    #token_victor = "ya29.a0ARrdaM8yuBz8zlr4SaWpxV39Z-80jwROwOaisqSAWQjOQddSx7dlK2diksCazQANU8JlZHBlHi99MWc3Gr6HexgepljLikE4s-5mtvd2yMNc_PVQqPu91Defpz_QCJKmFmMhNLymP5MsSotDYTVlp9qK0bVX"
+    if user is not None:
+        date_started_formatted = event.date_started.strftime("%Y-%m-%dT%H:%M:%S")
+        date_end_formatted = event.date_end.strftime("%Y-%m-%dT%H:%M:%S")
+        crearEvento(user.access_token, event.name, event.description, event.latitude, event.longitud, date_started_formatted, date_end_formatted)
     
     # Ejemplo de combinacion que funciona
     #auth_id = "ya29.a0ARrdaM8yuBz8zlr4SaWpxV39Z-80jwROwOaisqSAWQjOQddSx7dlK2diksCazQANU8JlZHBlHi99MWc3Gr6HexgepljLikE4s-5mtvd2yMNc_PVQqPu91Defpz_QCJKmFmMhNLymP5MsSotDYTVlp9qK0bVX"
     #crearEvento(user, "random guillem", "esto es un evento de prueba", 41.3713, 2.1494, '2022-05-10T09:00:00','2022-05-10T10:00:00')
 
     eventJSON = event.toJSON()
-    return jsonify(user, auth_id, token), 201
+    return jsonify(eventJSON), 201
 
 
 # MODIFICAR EVENTO: Modifica la información de un evento
@@ -152,6 +155,7 @@ def modify_events_v2(id):
     # Canviar el calendario si el modify es correcto
     auth_id = uuid.UUID(get_jwt_identity())
     user = GoogleAuth.query.filter_by(id=auth_id).first()
+    #token_victor = "ya29.a0ARrdaM8yuBz8zlr4SaWpxV39Z-80jwROwOaisqSAWQjOQddSx7dlK2diksCazQANU8JlZHBlHi99MWc3Gr6HexgepljLikE4s-5mtvd2yMNc_PVQqPu91Defpz_QCJKmFmMhNLymP5MsSotDYTVlp9qK0bVX"
     if user is not None:
         editarEventoTitle(user.access_token, event.name, args.get("name"))
         editarEventoDesciption(user.access_token, event.name, args.get("description"))
@@ -344,8 +348,11 @@ def join_event(id):
     # Añadir evento al calendario del usuario
     auth_id = uuid.UUID(get_jwt_identity())
     user = GoogleAuth.query.filter_by(id=auth_id).first()
+    #token_victor = "ya29.a0ARrdaM8yuBz8zlr4SaWpxV39Z-80jwROwOaisqSAWQjOQddSx7dlK2diksCazQANU8JlZHBlHi99MWc3Gr6HexgepljLikE4s-5mtvd2yMNc_PVQqPu91Defpz_QCJKmFmMhNLymP5MsSotDYTVlp9qK0bVX"
     if user is not None:
-        crearEvento(user.access_token, event.name, event.description, event.latitude, event.longitud, str(event.date_started), str(event.date_end))
+        date_started_formatted = event.date_started.strftime("%Y-%m-%dT%H:%M:%S")
+        date_end_formatted = event.date_end.strftime("%Y-%m-%dT%H:%M:%S")
+        crearEvento(user.access_token, event.name, event.description, event.latitude, event.longitud, date_started_formatted, date_end_formatted)
 
 
     return jsonify({"message": f"el usuario {user_id} se han unido CON EXITO"}), 200
@@ -411,6 +418,13 @@ def leave_event(id):
         return jsonify({"error_message": f"FK violated, el usuario {user_id} no esta definido en la BD"}), 400
     except:
         return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
+
+    # Eliminar el evento del calendario
+    auth_id = uuid.UUID(get_jwt_identity())
+    user = GoogleAuth.query.filter_by(id=auth_id).first()
+    #token_victor = "ya29.a0ARrdaM8yuBz8zlr4SaWpxV39Z-80jwROwOaisqSAWQjOQddSx7dlK2diksCazQANU8JlZHBlHi99MWc3Gr6HexgepljLikE4s-5mtvd2yMNc_PVQqPu91Defpz_QCJKmFmMhNLymP5MsSotDYTVlp9qK0bVX"
+    if user is not None:
+        eliminarEventoTitle(user.access_token, event.name)
 
     return jsonify({"message": f"el participante {user_id} ha abandonado CON EXITO"}), 200
 
