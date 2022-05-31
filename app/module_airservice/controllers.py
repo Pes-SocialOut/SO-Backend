@@ -11,7 +11,7 @@ from flask import Blueprint, jsonify, request #, render_template, flash, g, sess
 from app import db
 
 # Import module models
-from app.module_airservice.models import air_quality_station, air_quality_data, ml_model_cache, pollutant, triangulation_cache
+from app.module_airservice.models import air_quality_station, air_quality_data, pollutant, triangulation_cache
 
 
 # Import time libraries
@@ -114,237 +114,12 @@ def barycentric_interpolation(x1, y1, x2, y2, x3, y3, xp, yp):
     w1 = ((y3-y1)*(xp-x3)+(x1-x3)*(yp-y3))/((y2-y3)*(x1-x3)+(x3-x2)*(y1-y3))
     return w0, w1, 1-w0-w1
 
-estaciones = {8015001: {'ALTITUD': 6,
-  'AREA URBANA': 2,
-  'CODI COMARCA': 13,
-  'CODI INE': 8015,
-  'CONTAMINANT': 4948,
-  'LATITUD': 41.443584,
-  'LONGITUD': 2.23889,
-  'TIPUS ESTACIO': 2},
- 8015021: {'ALTITUD': 7,
-  'AREA URBANA': 2,
-  'CODI COMARCA': 13,
-  'CODI INE': 8015,
-  'CONTAMINANT': 1211,
-  'LATITUD': 41.443985,
-  'LONGITUD': 2.2378986,
-  'TIPUS ESTACIO': 0},
- 8019003: {'ALTITUD': 75,
-  'AREA URBANA': 2,
-  'CODI COMARCA': 13,
-  'CODI INE': 8019,
-  'CONTAMINANT': 2335,
-  'LATITUD': 41.401128,
-  'LONGITUD': 2.146942,
-  'TIPUS ESTACIO': 2},
- 8019004: {'ALTITUD': 3,
-  'AREA URBANA': 2,
-  'CODI COMARCA': 13,
-  'CODI INE': 8019,
-  'CONTAMINANT': 349,
-  'LATITUD': 40.64299,
-  'LONGITUD': 0.2884,
-  'TIPUS ESTACIO': 0},
- 8019039: {'ALTITUD': 12,
-  'AREA URBANA': 2,
-  'CODI COMARCA': 13,
-  'CODI INE': 8019,
-  'CONTAMINANT': 3220,
-  'LATITUD': 41.422213,
-  'LONGITUD': 2.190555,
-  'TIPUS ESTACIO': 2},
- 8019042: {'ALTITUD': 35,
-  'AREA URBANA': 2,
-  'CODI COMARCA': 13,
-  'CODI INE': 8019,
-  'CONTAMINANT': 60,
-  'LATITUD': 41.117399,
-  'LONGITUD': 1.241703,
-  'TIPUS ESTACIO': 0},
- 8019043: {'ALTITUD': 26,
-  'AREA URBANA': 2,
-  'CODI COMARCA': 13,
-  'CODI INE': 8019,
-  'CONTAMINANT': 1212,
-  'LATITUD': 41.385315,
-  'LONGITUD': 2.1537998,
-  'TIPUS ESTACIO': 2},
- 8019044: {'ALTITUD': 57,
-  'AREA URBANA': 2,
-  'CODI COMARCA': 13,
-  'CODI INE': 8019,
-  'CONTAMINANT': 15,
-  'LATITUD': 41.193603,
-  'LONGITUD': 1.236701,
-  'TIPUS ESTACIO': 2},
- 8019050: {'ALTITUD': 7,
-  'AREA URBANA': 2,
-  'CODI COMARCA': 13,
-  'CODI INE': 8019,
-  'CONTAMINANT': 5278,
-  'LATITUD': 41.386403,
-  'LONGITUD': 2.187398,
-  'TIPUS ESTACIO': 0},
- 8019054: {'ALTITUD': 136,
-  'AREA URBANA': 2,
-  'CODI COMARCA': 13,
-  'CODI INE': 8019,
-  'CONTAMINANT': 3989,
-  'LATITUD': 41.426109,
-  'LONGITUD': 2.148002,
-  'TIPUS ESTACIO': 0},
- 8019056: {'ALTITUD': 81,
-  'AREA URBANA': 2,
-  'CODI COMARCA': 13,
-  'CODI INE': 8019,
-  'CONTAMINANT': 310,
-  'LATITUD': 41.389726,
-  'LONGITUD': 2.115836,
-  'TIPUS ESTACIO': 0},
- 8019057: {'ALTITUD': 81,
-  'AREA URBANA': 2,
-  'CODI COMARCA': 13,
-  'CODI INE': 8019,
-  'CONTAMINANT': 1212,
-  'LATITUD': 41.38749,
-  'LONGITUD': 2.1151996,
-  'TIPUS ESTACIO': 0},
- 8019058: {'ALTITUD': 415,
-  'AREA URBANA': 1,
-  'CODI COMARCA': 13,
-  'CODI INE': 8019,
-  'CONTAMINANT': 1212,
-  'LATITUD': 41.41843,
-  'LONGITUD': 2.1238973,
-  'TIPUS ESTACIO': 0},
- 8022006: {'ALTITUD': 661,
-  'AREA URBANA': 1,
-  'CODI COMARCA': 14,
-  'CODI INE': 8022,
-  'CONTAMINANT': 1212,
-  'LATITUD': 42.0979,
-  'LONGITUD': 1.8482014,
-  'TIPUS ESTACIO': 0},
- 8058003: {'ALTITUD': 213,
-  'AREA URBANA': 0,
-  'CODI COMARCA': 3,
-  'CODI INE': 8058,
-  'CONTAMINANT': 4370,
-  'LATITUD': 41.244883,
-  'LONGITUD': 1.6177,
-  'TIPUS ESTACIO': 0},
- 8073001: {'ALTITUD': 27,
-  'AREA URBANA': 2,
-  'CODI COMARCA': 11,
-  'CODI INE': 8073,
-  'CONTAMINANT': 5766,
-  'LATITUD': 41.35638,
-  'LONGITUD': 2.076113,
-  'TIPUS ESTACIO': 2},
- 8074001: {'ALTITUD': 17,
-  'AREA URBANA': 3,
-  'CODI COMARCA': 17,
-  'CODI INE': 8074,
-  'CONTAMINANT': 3493,
-  'LATITUD': 41.208614,
-  'LONGITUD': 1.673054,
-  'TIPUS ESTACIO': 0},
- 8074005: {'ALTITUD': 5,
-  'AREA URBANA': 1,
-  'CODI COMARCA': 17,
-  'CODI INE': 8074,
-  'CONTAMINANT': 683,
-  'LATITUD': 41.202198,
-  'LONGITUD': 1.6722002,
-  'TIPUS ESTACIO': 0},
- 8080001: {'ALTITUD': 1120,
-  'AREA URBANA': 0,
-  'CODI COMARCA': 14,
-  'CODI INE': 8080,
-  'CONTAMINANT': 2345,
-  'LATITUD': 42.177772,
-  'LONGITUD': 1.835,
-  'TIPUS ESTACIO': 1},
- 8089002: {'ALTITUD': 15,
-  'AREA URBANA': 2,
-  'CODI COMARCA': 11,
-  'CODI INE': 8089,
-  'CONTAMINANT': 1546,
-  'LATITUD': 41.303897,
-  'LONGITUD': 2.000276,
-  'TIPUS ESTACIO': 0},
- 8089003: {'ALTITUD': 34,
-  'AREA URBANA': 3,
-  'CODI COMARCA': 11,
-  'CODI INE': 8089,
-  'CONTAMINANT': 1404,
-  'LATITUD': 41.303038,
-  'LONGITUD': 1.991389,
-  'TIPUS ESTACIO': 0},
- 8089004: {'ALTITUD': 12,
-  'AREA URBANA': 3,
-  'CODI COMARCA': 11,
-  'CODI INE': 8089,
-  'CONTAMINANT': 1570,
-  'LATITUD': 41.300574,
-  'LONGITUD': 2.013889,
-  'TIPUS ESTACIO': 2},
- 8089005: {'ALTITUD': 25,
-  'AREA URBANA': 1,
-  'CODI COMARCA': 11,
-  'CODI INE': 8089,
-  'CONTAMINANT': 1212,
-  'LATITUD': 41.303097,
-  'LONGITUD': 1.9914981,
-  'TIPUS ESTACIO': 0},
- 8096010: {'ALTITUD': 145,
-  'AREA URBANA': 2,
-  'CODI COMARCA': 41,
-  'CODI INE': 8096,
-  'CONTAMINANT': 3503,
-  'LATITUD': 41.6153,
-  'LONGITUD': 2.290834,
-  'TIPUS ESTACIO': 2},
- 8096011: {'ALTITUD': 145,
-  'AREA URBANA': 3,
-  'CODI COMARCA': 41,
-  'CODI INE': 8096,
-  'CONTAMINANT': 4152,
-  'LATITUD': 41.599429,
-  'LONGITUD': 2.279169,
-  'TIPUS ESTACIO': 1},
- 8096014: {'ALTITUD': 133,
-  'AREA URBANA': 2,
-  'CODI COMARCA': 41,
-  'CODI INE': 8096,
-  'CONTAMINANT': 1211,
-  'LATITUD': 41.598682,
-  'LONGITUD': 2.2870984,
-  'TIPUS ESTACIO': 2},
- 8101001: {'ALTITUD': 29,
-  'AREA URBANA': 2,
-  'CODI COMARCA': 13,
-  'CODI INE': 8101,
-  'CONTAMINANT': 319,
-  'LATITUD': 41.193603,
-  'LONGITUD': 1.236701,
-  'TIPUS ESTACIO': 0},
- 8102005: {'ALTITUD': 311,
-  'AREA URBANA': 1,
-  'CODI COMARCA': 6,
-  'CODI INE': 8102,
-  'CONTAMINANT': 321,
-  'LATITUD': 41.5784,
-  'LONGITUD': 1.6230061,
-  'TIPUS ESTACIO': 1}}
-
 
 #machine learning
 @module_airservice_v1.route('/ml', methods=['GET'])
 def machine_learning():
-    tipus_estacio_mapping = {"peri-urban": 3, "background": 0, "industrial": 1, "traffic": 2}
-    area_urbana_mapping = {"rural": 0, "suburban": 1, "urban": 2}
+    tipus_estacio_mapping = {"peri-urban": 3.0, "background": 0.0, "industrial": 1.0, "traffic": 2.0}
+    area_urbana_mapping = {"rural": 0.0, "suburban": 1.0, "urban": 2.0}
     
     try:
         codi_eoi1 = float(request.args.get('codi_eoi1'))
@@ -363,93 +138,90 @@ def machine_learning():
         loaded_model = cPickle.load(bz2.BZ2File(filename, 'rb'))
     except ValueError:
         return jsonify({"error_message":"Bad query params"}), 400
-    
+
     try:
-        """ machinelearning = ml_model_cache.query.first()
-        loaded_model = pkl.loads(machinelearning.ml_model_bytes)"""
         query_result1 = air_quality_station.query.filter_by(eoi_code = '43013002').first()
         query_result2 = air_quality_station.query.filter_by(eoi_code = request.args.get('codi_eoi2')).first()
         query_result3 = air_quality_station.query.filter_by(eoi_code = request.args.get('codi_eoi3')).first()
+
+        query_result1json = query_result1.toJSON()
+        query_result2json = query_result2.toJSON()
+        query_result3json = query_result3.toJSON()
         if query_result1 == None:
-            return jsonify({"error_message":f"Station with eoi_code {request.args.get('codi_eoi1')} is not registered"}), 404
+            return jsonify({"rror_message":f"Station with eoi_code {request.args.get('codi_eoi1')} is not registered"}), 404
+            #return jsonify(query_result1.toJSON())
+        if query_result2 == None:
+            return jsonify({"rror_message":f"Station with eoi_code {request.args.get('codi_eoi2')} is not registered"}), 404
+        if query_result3 == None:
+            return jsonify({"rror_message":f"Station with eoi_code {request.args.get('codi_eoi3')} is not registered"}), 404
+    
+
+        
+        
+    except ValueError:
+        return jsonify({"not stations"}), 400
+    
+    try:
+        
         """pred1 = {"CODI EOI": codi_eoi1, 
         "CONTAMINANT": contaminant1, 
         "TIPUS ESTACIO": tipus_estacio_mapping[query_result1.station_type] , 
         "AREA URBANA" : area_urbana_mapping[query_result1.urban_area] , 
-        "CODI INE": codi_eoi1[ 0 : 4 ] , 
+        "CODI INE": str(codi_eoi1)[0:4] , 
         "CODI COMARCA": query_result1.codi_comarca , 
         "ALTITUD": query_result1.altitude , 
         "LATITUD": query_result1.latitude , 
         "LONGITUD": query_result1.longitude , 
         "Dia": dia, 
         "Mes": mes, 
-        "Año": año, 
+        "Año": year, 
+        "Hora": hora }"""
+        pred1 = {"CODI EOI": codi_eoi1, 
+        "CONTAMINANT": contaminant1, 
+        "TIPUS ESTACIO": tipus_estacio_mapping[query_result1json["station_type"]] , 
+        "AREA URBANA" :area_urbana_mapping[query_result1json["urban_area"]], 
+        "CODI INE": str(codi_eoi1)[0:4] , 
+        "CODI COMARCA": 13 , 
+        "ALTITUD": query_result1.altitude , 
+        "LATITUD": query_result1.latitude , 
+        "LONGITUD": query_result1.longitude , 
+        "Dia": dia, 
+        "Mes": mes, 
+        "Año": year, 
         "Hora": hora }
+    
+    except ValueError:
+        return jsonify({"error creating pred1"}), 400
+
+    try:
         pred2 = {"CODI EOI": codi_eoi2, 
         "CONTAMINANT": contaminant2, 
-        "TIPUS ESTACIO": tipus_estacio_mapping[query_result2.station_type] , 
-        "AREA URBANA" : area_urbana_mapping[query_result2.urban_area] , 
-        "CODI INE": codi_eoi2[ 0 : 4 ] , 
-        "CODI COMARCA": query_result2.codi_comarca , 
+        "TIPUS ESTACIO": tipus_estacio_mapping[query_result2json["station_type"]] , 
+        "AREA URBANA" :area_urbana_mapping[query_result2json["urban_area"]], 
+        "CODI INE": str(codi_eoi2)[0:4] , 
+        "CODI COMARCA": 13 , 
         "ALTITUD": query_result2.altitude , 
         "LATITUD": query_result2.latitude , 
         "LONGITUD": query_result2.longitude , 
         "Dia": dia, 
         "Mes": mes, 
-        "Año": año, 
+        "Año": year, 
         "Hora": hora }
         pred3 = {"CODI EOI": codi_eoi3, 
         "CONTAMINANT": contaminant3, 
-        "TIPUS ESTACIO": tipus_estacio_mapping[query_result3.station_type] , 
-        "AREA URBANA" : area_urbana_mapping[query_result3.urban_area] , 
-        "CODI INE": codi_eoi3[ 0 : 4 ] , 
-        "CODI COMARCA": query_result3.codi_comarca , 
+        "TIPUS ESTACIO": tipus_estacio_mapping[query_result3json["station_type"]] , 
+        "AREA URBANA" :area_urbana_mapping[query_result3json["urban_area"]], 
+        "CODI INE": str(codi_eoi3)[0:4] , 
+        "CODI COMARCA": 13 , 
         "ALTITUD": query_result3.altitude , 
         "LATITUD": query_result3.latitude , 
         "LONGITUD": query_result3.longitude , 
         "Dia": dia, 
         "Mes": mes, 
-        "Año": año, 
-        "Hora": hora }"""
-        pred1 = {"CODI EOI": codi_eoi1, 
-        "CONTAMINANT": contaminant1, 
-        "TIPUS ESTACIO": estaciones[codi_eoi1]["TIPUS ESTACIO"], 
-        "AREA URBANA" : estaciones[codi_eoi1]["AREA URBANA"], 
-        "CODI INE": str(codi_eoi1)[0:4], 
-        "CODI COMARCA": estaciones[codi_eoi1]["CODI COMARCA"], 
-        "ALTITUD": query_result1.altitude, 
-        "LATITUD": estaciones[codi_eoi1]["LATITUD"], 
-        "LONGITUD": estaciones[codi_eoi1]["LONGITUD"], 
-        "Dia": dia, 
-        "Mes": mes, 
         "Año": year, 
         "Hora": hora }
-        pred2 = {"CODI EOI": codi_eoi2, 
-        "CONTAMINANT": contaminant2, 
-        "TIPUS ESTACIO": estaciones[codi_eoi2]["TIPUS ESTACIO"], 
-        "AREA URBANA" : estaciones[codi_eoi2]["AREA URBANA"], 
-        "CODI INE": estaciones[codi_eoi2]["CODI INE"], 
-        "CODI COMARCA": estaciones[codi_eoi2]["CODI COMARCA"], 
-        "ALTITUD": estaciones[codi_eoi2]["ALTITUD"], 
-        "LATITUD": estaciones[codi_eoi2]["LATITUD"], 
-        "LONGITUD": estaciones[codi_eoi2]["LONGITUD"], 
-        "Dia": dia, 
-        "Mes": mes, 
-        "Año": year, 
-        "Hora": hora }
-        pred3 = {"CODI EOI": codi_eoi3, 
-        "CONTAMINANT": contaminant3, 
-        "TIPUS ESTACIO": estaciones[codi_eoi3]["TIPUS ESTACIO"], 
-        "AREA URBANA" : estaciones[codi_eoi3]["AREA URBANA"], 
-        "CODI INE": estaciones[codi_eoi3]["CODI INE"], 
-        "CODI COMARCA": estaciones[codi_eoi3]["CODI COMARCA"], 
-        "ALTITUD": estaciones[codi_eoi3]["ALTITUD"], 
-        "LATITUD": estaciones[codi_eoi3]["LATITUD"], 
-        "LONGITUD": estaciones[codi_eoi3]["LONGITUD"], 
-        "Dia": dia, 
-        "Mes": mes, 
-        "Año": year, 
-        "Hora": hora }
+        
+        
         
     except:
         return jsonify({"error_message":"Machine Learning Model failed , try again later..."}), 404
@@ -464,8 +236,8 @@ def machine_learning():
     pred3Ser = pd.Series(data=pred3, index=["CODI EOI", "CONTAMINANT", "TIPUS ESTACIO", "AREA URBANA" , "CODI INE", "CODI COMARCA", "ALTITUD", "LATITUD", "LONGITUD", "Dia", "Mes", "Año", "Hora" ])
     prediction3 = float(loaded_model.predict([pred3Ser]))
 
-    #w0, w1, w2 = barycentric_interpolation(query_result1.longitude, query_result1.latitude, query_result2.longitude, query_result2.latitude, query_result3.longitude, query_result3.latitude, longitud, latitud)
-    w0, w1, w2 = barycentric_interpolation(estaciones[codi_eoi1]["LONGITUD"], estaciones[codi_eoi1]["LATITUD"], estaciones[codi_eoi2]["LONGITUD"], estaciones[codi_eoi2]["LATITUD"], estaciones[codi_eoi3]["LONGITUD"], estaciones[codi_eoi3]["LATITUD"], longitud, latitud)
+    w0, w1, w2 = barycentric_interpolation(query_result1.longitude, query_result1.latitude, query_result2.longitude, query_result2.latitude, query_result3.longitude, query_result3.latitude, longitud, latitud)
+    #w0, w1, w2 = barycentric_interpolation(estaciones[codi_eoi1]["LONGITUD"], estaciones[codi_eoi1]["LATITUD"], estaciones[codi_eoi2]["LONGITUD"], estaciones[codi_eoi2]["LATITUD"], estaciones[codi_eoi3]["LONGITUD"], estaciones[codi_eoi3]["LATITUD"], longitud, latitud)
     general_quality = w0*prediction1 + w1*prediction2 + w2*prediction3
 
 
