@@ -14,6 +14,12 @@ from datetime import timedelta
 # Import pickle library to save python objects to file
 import pickle as pkl
 
+# Import modules for machine learning
+import _pickle as cPickle
+import bz2
+import pandas as pd
+
+
 # Define the blueprint: 'air', set its url prefix: app.url/air
 module_airservice_v1 = Blueprint('air', __name__, url_prefix='/v1/air')
 
@@ -141,13 +147,6 @@ def general_quality_at_multiple_points():
         response.append({'ref_id': ref_id, 'pollution': general_quality})
     return jsonify({'triangulation_last_calculated_at': triangulation_upd_time, 'points': response}), 200
 
-import pickle
-import _pickle as cPickle
-import bz2
-import pandas as pd
-from sklearn import metrics
-
-
 #machine learning
 @module_airservice_v1.route('/ml', methods=['GET'])
 def machine_learning():
@@ -195,7 +194,6 @@ def machine_learning():
             pred1Ser = pd.Series(data=pred1, index=["CODI EOI", "CONTAMINANT", "TIPUS ESTACIO", "AREA URBANA" , "CODI INE", "CODI COMARCA", "ALTITUD", "LATITUD", "LONGITUD", "Dia", "Mes", "Año", "Hora" ])
             prediction1 = float(loaded_model.predict([pred1Ser]))
 
-            
         if request.args.get("codi_eoi2") is not None:
             query_result2 = air_quality_station.query.filter_by(eoi_code = request.args.get('codi_eoi2')).first()
             query_result2json = query_result2.toJSON()
@@ -236,8 +234,6 @@ def machine_learning():
             "Hora": hora }
             pred3Ser = pd.Series(data=pred3, index=["CODI EOI", "CONTAMINANT", "TIPUS ESTACIO", "AREA URBANA" , "CODI INE", "CODI COMARCA", "ALTITUD", "LATITUD", "LONGITUD", "Dia", "Mes", "Año", "Hora" ])
             prediction3 = float(loaded_model.predict([pred3Ser]))
-
-
          
     except ValueError:
         return jsonify({"not stations"}), 400
@@ -248,11 +244,6 @@ def machine_learning():
     elif (request.args.get("codi_eoi3") is None) :
         general_quality = (prediction1 + prediction2)/2
     
-
-
     response = jsonify({'pollution': general_quality, "accuracy": 0.8286334127981916})
     response.status_code = 200
     return response
-    
-
-    return {"error_message": "all good"}

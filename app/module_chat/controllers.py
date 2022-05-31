@@ -173,6 +173,29 @@ def get_user_creations(id):
         return jsonify({"error_message": "Chat no exist"}), 400
 
     return jsonify([chat.toJSON() for chat in chats_creador]), 200
+
+
+# GET method: get all chats from an event
+@module_chat_v1.route('/event/<id>', methods=['GET'])
+# RECIBE:
+    # GET HTTP request con la id del evento del que queremos obtener los chats
+# DEVUELVE
+    # -202: Un objeto JSON con todos los Chats del evento solicitado
+    # -400: Un objeto JSON con los posibles mensajes de error, id no valida o usuario no existe
+@jwt_required(optional=False)
+def get_events_chats(id):
+    try: 
+        event_id_buscat = uuid.UUID(id)
+    except:
+        return jsonify({"error_message": "The user id isn't a valid uuid"}), 400
+
+    try:
+        chats_event = Chat.query.filter_by(event_id = event_id_buscat)
+    except:
+        return jsonify({"error_message": "Chat no exist"}), 400
+
+    return jsonify([chat.toJSON() for chat in chats_event]), 200
+
     
 # Get method: get all messages from a chat
 @module_chat_v1.route('/Message/', methods=['GET'])
