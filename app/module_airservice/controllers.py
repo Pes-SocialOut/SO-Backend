@@ -141,6 +141,11 @@ def general_quality_at_multiple_points():
         response.append({'ref_id': ref_id, 'pollution': general_quality})
     return jsonify({'triangulation_last_calculated_at': triangulation_upd_time, 'points': response}), 200
 
+import pickle
+import _pickle as cPickle
+import bz2
+import pandas as pd
+from sklearn import metrics
 
 #machine learning
 @module_airservice_v1.route('/ml', methods=['GET'])
