@@ -157,8 +157,8 @@ def modify_events_v2(id):
     user = GoogleAuth.query.filter_by(id=auth_id).first()
     #token_victor = "ya29.a0ARrdaM8yuBz8zlr4SaWpxV39Z-80jwROwOaisqSAWQjOQddSx7dlK2diksCazQANU8JlZHBlHi99MWc3Gr6HexgepljLikE4s-5mtvd2yMNc_PVQqPu91Defpz_QCJKmFmMhNLymP5MsSotDYTVlp9qK0bVX"
     if user is not None:
-        editarEventoTitle(user.access_token, event.name, args.get("name"))
-        editarEventoDesciption(user.access_token, event.name, args.get("description"))
+        editarEventoDesciption(user.access_token, str(event.name), str(args.get("description")))
+        editarEventoTitle(user.access_token, str(event.name), str(args.get("name")))
     
     event.name = args.get("name")
     event.description = args.get("description")
@@ -352,7 +352,7 @@ def join_event(id):
     if user is not None:
         date_started_formatted = event.date_started.strftime("%Y-%m-%dT%H:%M:%S")
         date_end_formatted = event.date_end.strftime("%Y-%m-%dT%H:%M:%S")
-        crearEvento(user.access_token, event.name, event.description, event.latitude, event.longitud, date_started_formatted, date_end_formatted)
+        crearEvento(user.access_token, event.name, event.description, event.latitude, event.longitud, date_started_formatted, date_end_formatted)    
 
 
     return jsonify({"message": f"el usuario {user_id} se han unido CON EXITO"}), 200
