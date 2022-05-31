@@ -149,11 +149,3 @@ class triangulation_cache(db.Model):
 
     def __init__(self):
         self.tri_object_bytes = None
-
-class ml_model(db.Model):
-    __tablename__ = 'ml_model'
-
-    ml_model_bytes = db.Column(BYTEA, primary_key=True)
-
-    def __init__(self):
-        self.ml_model_bytes = None
