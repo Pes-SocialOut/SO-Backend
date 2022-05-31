@@ -18,11 +18,11 @@ date_today = datetime.today()
 date_anterior = date_today - timedelta(days = 1)
 date_anterior = date_anterior.strftime('%Y-%m-%d')
 
-def insert_air_station(eoi_code, name, station_t, urban_a, altitude, latitude, longitude, engine) -> None:
+def insert_air_station(eoi_code, name, station_t, urban_a, altitude, latitude, longitude, codi_comarca, engine) -> None:
     with engine.connect() as conn:
         conn.execute(
-            'INSERT INTO air_quality_station VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)',
-            (name, eoi_code, station_t, urban_a, altitude, latitude, longitude, 0.0, date_today))
+            'INSERT INTO air_quality_station VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+            (name, eoi_code, station_t, urban_a, altitude, latitude, longitude, 0.0, date_today, codi_comarca))
 
 def normalizar(cont, valor) -> float:
     return valor/contaminantes[cont][0]
@@ -48,8 +48,8 @@ def main(db_uri):
         most_recent_db_data_time = conn.execute(
             'SELECT max(date_hour) FROM air_quality_data'
         ).fetchall()[0][0]
-    if not most_recent_db_data_time < most_recent_remote_data_time:
-        raise Exception('Remote has not updated its data since last extraction. Try again later.')
+    #if not most_recent_db_data_time < most_recent_remote_data_time:
+       # raise Exception('Remote has not updated its data since last extraction. Try again later.')
     
     # Borrar datos de hace más de un dia
     with engine.connect() as conn:
@@ -80,6 +80,7 @@ def main(db_uri):
                 int(medicion['altitud']),
                 float(medicion['latitud']),
                 float(medicion['longitud']),
+                medicion['codi_comarca'],
                 engine)
             estaciones_vistas.add(medicion['codi_eoi'])
         
