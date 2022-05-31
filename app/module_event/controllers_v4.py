@@ -45,7 +45,6 @@ max_latitude_catalunya = 42.85
 def create_event():
     try:
         args = request.json
-        #args.noauth_local_webserver = True
     except:
         return jsonify({"error_message": "Mira el JSON body de la request, hay un atributo mal definido!"}), 400
 
@@ -104,7 +103,7 @@ def create_event():
 
     eventJSON = event.toJSON()
     testing = {"auth_id": auth_id, "user": user}
-    return jsonify(testing), 201
+    return testing, 201
 
 
 # MODIFICAR EVENTO: Modifica la información de un evento
@@ -348,6 +347,9 @@ def join_event(id):
     user = GoogleAuth.query.filter_by(id=auth_id).first()
     if user is not None:
         crearEvento(user.access_token, event.name, event.description, event.latitude, event.longitud, str(event.date_started), str(event.date_end))
+
+    # Crear el chat
+    
 
 
     return jsonify({"message": f"el usuario {user_id} se han unido CON EXITO"}), 200
