@@ -7,8 +7,6 @@ from app.module_admin.models import Admin
 from app.module_airservice.controllers import general_quality_at_a_point
 from app.module_users.utils import increment_achievement_of_user
 
-from app.module_chat.controllers import crear_chat_back
-
 from profanityfilter import ProfanityFilter
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from datetime import datetime, timedelta
@@ -18,11 +16,13 @@ import uuid
 import validators
 import json
 
+from app.module_calendar.functions_calendar import crearEvento, eliminarEventoID, eliminarEventoTitle, editarEventoTitle, editarEventoDesciption
+
 # Import the database object from the main app module
 from app import db
 
 # Define the blueprint: 'event', set its url prefix: app.url/event
-module_event_v3 = Blueprint('event_v3', __name__, url_prefix='/v3/events')
+module_event_v4 = Blueprint('event_v4', __name__, url_prefix='/v4/events')
 
 # Min y Max longitud and latitude of Catalunya from resource https://www.idescat.cat/pub/?id=aec&n=200&t=2019
 min_longitud_catalunya = 0.15
@@ -40,12 +40,11 @@ max_latitude_catalunya = 42.85
 # Devuelve:
 # - 400: Un objeto JSON con un mensaje de error
 # - 201: Un objeto JSON con todos los parametros del evento creado (con la id incluida)
-@module_event_v3.route('/', methods=['POST'])
+@module_event_v4.route('/', methods=['POST'])
 @jwt_required(optional=True)  # cambio esto y lo pongo en True
 def create_event():
     try:
         args = request.json
-        #args.noauth_local_webserver = True
     except:
         return jsonify({"error_message": "Mira el JSON body de la request, hay un atributo mal definido!"}), 400
 
@@ -92,8 +91,18 @@ def create_event():
     except:
         return jsonify({"error_message": "Error de DB nuevo, cual es?"}), 400
 
+    # Añadir evento al calendario del creador
+    auth_id = uuid.UUID(get_jwt_identity())
+    user = GoogleAuth.query.filter_by(id=auth_id).first()
+    token = "ya29.a0ARrdaM_HfB2QaKf9xxx57qmeKNGXK7RWieTnFHEHenpd3IjRBIcJZzWYfiDdXe0lQ1JEL0nilBC6Mmodkrd_0u843S1JahNumEdqPEndPcliCHtaPdl3eMW1WDgJXzSNxJuNxZqCzpj592G3MDDMjPJi4Jrh"
+    crearEvento(token, event.name, event.description, event.latitude, event.longitud, '2022-05-15T09:00:00','2022-05-16T10:00:00')
+    
+    # Ejemplo de combinacion que funciona
+    #auth_id = "ya29.a0ARrdaM8yuBz8zlr4SaWpxV39Z-80jwROwOaisqSAWQjOQddSx7dlK2diksCazQANU8JlZHBlHi99MWc3Gr6HexgepljLikE4s-5mtvd2yMNc_PVQqPu91Defpz_QCJKmFmMhNLymP5MsSotDYTVlp9qK0bVX"
+    #crearEvento(user, "random guillem", "esto es un evento de prueba", 41.3713, 2.1494, '2022-05-10T09:00:00','2022-05-10T10:00:00')
+
     eventJSON = event.toJSON()
-    return jsonify(eventJSON), 201
+    return jsonify(user, auth_id, token), 201
 
 
 # MODIFICAR EVENTO: Modifica la información de un evento
@@ -103,7 +112,7 @@ def create_event():
 # Devuelve:
 # - 400: Un objeto JSON con un mensaje de error
 # - 200: Un objeto JSON con un mensaje de evento modificado con exito
-@module_event_v3.route('/<id>', methods=['PUT'])
+@module_event_v4.route('/<id>', methods=['PUT'])
 @jwt_required(optional=False)
 def modify_events_v2(id):
     try:
@@ -140,6 +149,13 @@ def modify_events_v2(id):
     if str(event.user_creator) != auth_id:
         return jsonify({"error_message": "A user cannot update the events of others"}), 403
 
+    # Canviar el calendario si el modify es correcto
+    auth_id = uuid.UUID(get_jwt_identity())
+    user = GoogleAuth.query.filter_by(id=auth_id).first()
+    if user is not None:
+        editarEventoTitle(user.access_token, event.name, args.get("name"))
+        editarEventoDesciption(user.access_token, event.name, args.get("description"))
+    
     event.name = args.get("name")
     event.description = args.get("description")
     event.longitud = float(args.get("longitud"))
@@ -257,7 +273,7 @@ def check_atributes(args, type):
 # Devuelve:
 # - 400: Un objeto JSON con un mensaje de error
 # - 200: Un objeto JSON con un mensaje de el usuario se ha unido con exito
-@module_event_v3.route('/<id>/join', methods=['POST'])
+@module_event_v4.route('/<id>/join', methods=['POST'])
 @jwt_required(optional=False)
 def join_event(id):
     try:
@@ -325,8 +341,12 @@ def join_event(id):
         if contaminacion["pollution"] < 0.15:
             increment_achievement_of_user("social_bug",user_id)
 
-    # Se crea un chat entre el participante y el creador
-    crear_chat_back(event.id, user_id)
+    # Añadir evento al calendario del usuario
+    auth_id = uuid.UUID(get_jwt_identity())
+    user = GoogleAuth.query.filter_by(id=auth_id).first()
+    if user is not None:
+        crearEvento(user.access_token, event.name, event.description, event.latitude, event.longitud, str(event.date_started), str(event.date_end))
+
 
     return jsonify({"message": f"el usuario {user_id} se han unido CON EXITO"}), 200
 
@@ -338,7 +358,7 @@ def join_event(id):
 # Devuelve:
 # - 400: Un objeto JSON con un mensaje de error
 # - 200: Un objeto JSON con un mensaje de el usuario ha abandonado el evento CON EXITO
-@module_event_v3.route('/<id>/leave', methods=['POST'])
+@module_event_v4.route('/<id>/leave', methods=['POST'])
 @jwt_required(optional=False)
 def leave_event(id):
     try:
@@ -397,7 +417,7 @@ def leave_event(id):
 
 
 # PARTICIPACIONES DE UN USER: todos los eventos a los que un usuario se ha unido
-@module_event_v3.route('/joined/<id>', methods=['GET'])
+@module_event_v4.route('/joined/<id>', methods=['GET'])
 # RECIBE:
 # - GET HTTP request con la id del usuario que queremos solicitar
 # DEVUELVE:
@@ -428,7 +448,7 @@ def get_user_joins(id):
 
 
 # OBTENER UN EVENTO: returns the information of one event
-@module_event_v3.route('/<id>', methods=['GET'])
+@module_event_v4.route('/<id>', methods=['GET'])
 # RECIBE:
 # - GET HTTP request con la id del evento del que se quieren TODOS obtener los parametros
 # DEVUELVE:
@@ -462,7 +482,7 @@ def get_event(id):
 
 
 # OBTENER EVENTOS POR USUARIO CREADOR method: devuelve todos los eventos creados por un usuario
-@module_event_v3.route('/creator', methods=['GET'])
+@module_event_v4.route('/creator', methods=['GET'])
 # RECIBE:
 # - GET HTTP request con la id del usuario del que se quieren obtener los eventos creados como query parameter.
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida
@@ -501,7 +521,7 @@ def get_creations():
 
 
 # DELETE EVENTO method: deletes an event from the database
-@module_event_v3.route('/<id>', methods=['DELETE'])
+@module_event_v4.route('/<id>', methods=['DELETE'])
 # RECIBE:
 # - DELETE HTTP request con la id del evento que se quiere eliminar
 # DEVUELVE:
@@ -563,6 +583,12 @@ def delete_event(id):
         except:
             return jsonify({"error_message": "error while deleting reviews of an event"}), 400
 
+    # Eliminar el evento del calendario
+    auth_id = uuid.UUID(get_jwt_identity())
+    user = GoogleAuth.query.filter_by(id=auth_id).first()
+    if user is not None:
+        eliminarEventoTitle(user.access_token, event.name)
+
     try:
         event.delete()
         return jsonify({"error_message": "Successful DELETE"}), 202
@@ -571,7 +597,7 @@ def delete_event(id):
 
 
 # GET ALL EVENTOS ACTIVOS method: retorna toda la informacion de todos los eventos activos de la database
-@module_event_v3.route('/', methods=['GET'])
+@module_event_v4.route('/', methods=['GET'])
 # RECIBE:
 # - GET HTTP request
 # DEVUELVE:
@@ -597,7 +623,7 @@ def get_all_events():
 # GET HTTP request con los atributos que quiere filtrar (formato JSON)
 #       {name, date_started, date_end}
 # Devuelve:
-@module_event_v3.route('/filter', methods=['GET'])
+@module_event_v4.route('/filter', methods=['GET'])
 @jwt_required(optional=False)
 def filter_by():
     try:
@@ -645,7 +671,7 @@ def filter_by():
 
 
 # OBTENER LOS 10 EVENTOS CREAS MAS RECIENTEMENTE method: Retorna un conjunto con los 10 eventos mas recientes
-@module_event_v3.route('/lastten', methods=['GET'])
+@module_event_v4.route('/lastten', methods=['GET'])
 @jwt_required(optional=False)
 def lastest_events():
     try:
@@ -668,7 +694,7 @@ def lastest_events():
 
 
 # SABER QUE PERSONAS SE HAN UNIDO A UN EVENTO method: Retorna el conjunto de users que se han unido a un evento
-@module_event_v3.route('/participants', methods=['GET'])
+@module_event_v4.route('/participants', methods=['GET'])
 @jwt_required(optional=False)
 def who_joined_event():
     try:
@@ -708,7 +734,7 @@ def who_joined_event():
 
 
 # LISTAR TODOS LOS EVENTOS PASADOS DE UN USUARIO:
-@module_event_v3.route('/pastevents', methods=['GET'])
+@module_event_v4.route('/pastevents', methods=['GET'])
 # DEVUELVE:
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
 # - 200: Un objeto JSON con los atributos de la review creada
@@ -771,12 +797,12 @@ def get_past_evento():
 
 
 # If the event doesn't exist
-@module_event_v3.errorhandler(404)
+@module_event_v4.errorhandler(404)
 def page_not_found():
     return "<h1>404</h1><p>The event could not be found.</p>", 404
 
 
-@module_event_v3.teardown_request
+@module_event_v4.teardown_request
 def teardown_request(exception):
     if exception:
         db.session.rollback()
@@ -787,7 +813,7 @@ def teardown_request(exception):
 
 
 # DAR LIKE method: un usuario le da like a un evento
-@module_event_v3.route('/<id>/like', methods=['POST'])
+@module_event_v4.route('/<id>/like', methods=['POST'])
 # RECIBE:
 # - POST HTTP request con los parametros en un JSON object en el body de la request.
 # DEVUELVE:
@@ -833,7 +859,7 @@ def create_like(id):
 
 
 # QUITAR LIKE method: deletes a like from the database
-@module_event_v3.route('/<id>/dislike', methods=['POST'])
+@module_event_v4.route('/<id>/dislike', methods=['POST'])
 # RECIBE:
 # - DELETE HTTP request con la id del evento que se quiere eliminar
 # DEVUELVE:
@@ -874,7 +900,7 @@ def delete_like(id):
 
 
 # LIKES DE UN USER: todos los eventos a los que un usuario ha dado like
-@module_event_v3.route('/like/<iduser>', methods=['GET'])
+@module_event_v4.route('/like/<iduser>', methods=['GET'])
 # RECIBE:
 # - GET HTTP request con la id del usuario que queremos solicitar
 # DEVUELVE:
@@ -910,7 +936,7 @@ def get_likes_by_user(iduser):
 
 
 # SABER SI USUARIO HA DADO LIKE A UN EVENTO method: saber si un usuario ha dado like a un evento
-@module_event_v3.route('/<iduser>/like/<idevento>', methods=['GET'])
+@module_event_v4.route('/<iduser>/like/<idevento>', methods=['GET'])
 # RECIBE:
 # - GET HTTP request con la id del usuario que queremos consultar
 # DEVUELVE:
@@ -949,7 +975,7 @@ def get_likes_from_user(iduser, idevento):
 
 
 # DIEZ EVENTOS CON MAYOR NUMERO DE LIKES: los 10 eventos con el mayor numero de likes
-@module_event_v3.route('/topten', methods=['GET'])
+@module_event_v4.route('/topten', methods=['GET'])
 # DEVUELVE:
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
 # - 200: Un objeto JSON con los top 10 eventos con mas likes
@@ -986,7 +1012,7 @@ def dataToJSON(data):
 ########################################################################### R E V I E W S ##################################################################
 
 # CREAR REVIEW: crear una review de un evento
-@module_event_v3.route('/review', methods=['POST'])
+@module_event_v4.route('/review', methods=['POST'])
 # DEVUELVE:
 # - 400 o 403: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
 # - 200: Un objeto JSON con los atributos de la review creada
@@ -1082,7 +1108,7 @@ def crear_review():
 
 
 # LISTAR TODAS LAS REVIEW DE UN EVENTO: crear una review de un evento
-@module_event_v3.route('/review', methods=['GET'])
+@module_event_v4.route('/review', methods=['GET'])
 # DEVUELVE:
 # - 400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
 # - 200: Un objeto JSON con los atributos de la review creada
