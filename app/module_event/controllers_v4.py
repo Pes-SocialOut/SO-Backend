@@ -45,7 +45,6 @@ max_latitude_catalunya = 42.85
 def create_event():
     try:
         args = request.json
-        #args.noauth_local_webserver = True
     except:
         return jsonify({"error_message": "Mira el JSON body de la request, hay un atributo mal definido!"}), 400
 
@@ -95,15 +94,15 @@ def create_event():
     # Añadir evento al calendario del creador
     auth_id = uuid.UUID(get_jwt_identity())
     user = GoogleAuth.query.filter_by(id=auth_id).first()
-    if user is not None:
-        crearEvento(user.access_token, event.name, event.description, event.latitude, event.longitud, str(event.date_started), str(event.date_end))
+    token = "ya29.a0ARrdaM_HfB2QaKf9xxx57qmeKNGXK7RWieTnFHEHenpd3IjRBIcJZzWYfiDdXe0lQ1JEL0nilBC6Mmodkrd_0u843S1JahNumEdqPEndPcliCHtaPdl3eMW1WDgJXzSNxJuNxZqCzpj592G3MDDMjPJi4Jrh"
+    crearEvento(token, event.name, event.description, event.latitude, event.longitud, '2022-05-15T09:00:00','2022-05-16T10:00:00')
     
     # Ejemplo de combinacion que funciona
     #auth_id = "ya29.a0ARrdaM8yuBz8zlr4SaWpxV39Z-80jwROwOaisqSAWQjOQddSx7dlK2diksCazQANU8JlZHBlHi99MWc3Gr6HexgepljLikE4s-5mtvd2yMNc_PVQqPu91Defpz_QCJKmFmMhNLymP5MsSotDYTVlp9qK0bVX"
     #crearEvento(user, "random guillem", "esto es un evento de prueba", 41.3713, 2.1494, '2022-05-10T09:00:00','2022-05-10T10:00:00')
 
     eventJSON = event.toJSON()
-    return jsonify(eventJSON, user, auth_id), 201
+    return jsonify(user, auth_id, token), 201
 
 
 # MODIFICAR EVENTO: Modifica la información de un evento

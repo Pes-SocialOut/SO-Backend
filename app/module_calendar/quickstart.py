@@ -26,15 +26,15 @@ def get_calendar_service(tokenUser):
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists('app/module_calendar/token.json'):
-       with open('app/module_calendar/token.json', 'r+') as token:
-           data = json.load(token)
-           data['token'] = tokenUser
-           token.seek(0)
-           json.dump(data, token, indent=4)
-           token.truncate()
-       creds = Credentials.from_authorized_user_file('app/module_calendar/token.json', SCOPES)
-       print(creds.to_json()[0])
+    #if os.path.exists('/app/module_calendar/token.json'):
+    with open('app/module_calendar/token.json', 'r+') as token:
+        data = json.load(token)
+        data['token'] = tokenUser
+        token.seek(0)
+        json.dump(data, token, indent=4)
+        token.truncate()
+    creds = Credentials.from_authorized_user_file('app/module_calendar/token.json', SCOPES)
+    print(creds.to_json()[0])
        
 
     """
