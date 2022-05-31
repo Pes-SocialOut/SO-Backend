@@ -354,9 +354,6 @@ def join_event(id):
         date_end_formatted = event.date_end.strftime("%Y-%m-%dT%H:%M:%S")
         crearEvento(user.access_token, event.name, event.description, event.latitude, event.longitud, date_started_formatted, date_end_formatted)    
 
-    # Crear el chat
-    
-
 
     return jsonify({"message": f"el usuario {user_id} se han unido CON EXITO"}), 200
 
