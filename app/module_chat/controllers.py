@@ -10,39 +10,6 @@ from flask import Blueprint, jsonify, request
 # Define the blueprint: 'Message', set its url prefix: app.url/message
 module_chat_v1 = Blueprint('chat', __name__, url_prefix= '/v1/chat')
 
-# Crear Chat: create a new chat
-# Recibe:
-# POST HTTP request con los atributos del nuevo chat en el body(JSON)
-#    {event_id, participant_id}
-# Devuelve
-# - 400: Un objeto JSON con un mensaje de error
-# - 201: un objeto JSON con todos los parametros del nuevo chat(JSON)
-@module_chat_v1.route('/', methods=['POST'])
-def create_chat():
-    try:
-        args = request.json
-    except: 
-        return jsonify({"error_message": "The JSON argument is bad defined"})
-
-    if args.get("event_id") is None:
-        return  jsonify({"error_message": "Event if is not defined or its value is null"}), 400
-    if args.get("participant_id") is None:
-        return jsonify({"error_message": "Participant id is not defined or its value is null"}), 400
-    
-    try:
-        event_id = uuid.UUID(args.get("event_id"))
-    except:
-        return jsonify({"error_message": "The event id is not a valid uuid"}), 400
-
-    try:
-        participant_id = uuid.UUID(args.get("participant_id"))
-    except:
-        return jsonify({"error_message": "The participant id is not a valid uuid"}), 400
-
-    return crear_chat_back(event_id, participant_id)
-
-
-
 def crear_chat_back(event_id, participant_id):
     
     id = uuid.uuid4()
@@ -128,22 +95,6 @@ def create_message():
 
     return jsonify(Message_new.toJSON()), 201
 
-    
-
-# DELETE method: deletes all the messages from an event
-@module_chat_v1.route('/<id>', methods=['DELETE'])
-# RECIBE:
-    # -DELETE HTTP request con la id del evento del cual se deben eliminar los mensajes
-# DEVUELVE:
-    # -400: Un objeto JSON con los posibles mensajes de error, id no valida o evento no existe
-    # -202: Un objeto JSON confirmando que se han borrado los debidos messages
-def delete_chats(id):
-    try:
-        usuari_esborrar = uuid.UUID(id)
-    except: 
-        return jsonify({"error_message": "The user id isn't a valid UUID" }), 400
-
-    return borrar_mensajes_usuario(usuari_esborrar)
 
 def borrar_mensajes_usuario(usuari_esborrar):
     try:
@@ -165,6 +116,41 @@ def borrar_mensajes_usuario(usuari_esborrar):
         return jsonify({"error_message": "Falla el eliminar los chats"}), 400
 
     return jsonify({"message":f"The messages from this user have been succesfully deleted"}), 202
+
+
+def borrar_mensajes_evento(event_esborrar):
+    
+    try:
+        A_borrar = Chat.query.filter_by(event_id = event_esborrar)  
+        for Chat_borrar in A_borrar:
+            Messages = Message.query.filter_by(chat_id = Chat_borrar.id)
+            for message in Messages:
+                message.delete()
+        for Chat_borrar in A_borrar:
+            Chat_borrar.delete()
+    except:
+        return jsonify({"error message": "Falla el eliminar los chats"}), 400
+
+    return jsonify({"message":f"The messages from this event have been succesfully deleted"}), 201
+
+
+def borrar_mensajes_participante(event_id_b, participant_id_b):
+    
+    try:
+        A_borrar= Chat.query.filter_by(participant_id = participant_id_b, event_id = event_id_b).first()
+    except:
+        return jsonify({"error message": "El participante no forma parte del evento"}), 400
+
+    try:
+        Messages = Message.query.filter_by(chat_id = A_borrar.id)
+        for message in Messages:
+            message.delete()
+        A_borrar.delete()
+    except:
+        return jsonify({"error message": "Falla el eliminar los chats"}), 400
+
+    return jsonify({"message":f"The messages from this participant have been succesfully deleted"}), 201   
+
 
     
 # GET method: get all chats from a user as creator
