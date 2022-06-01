@@ -140,8 +140,8 @@ def request_new_friend_link():
     new_invite = FriendInvite(auth_id, code, datetime.now(timezone.utc)+timedelta(days=3))
     try:
         new_invite.save()
-    except:
-        return jsonify({"error_message": "Something went wrong inserting new invitation code to DB: {code}"}), 500
+    except Exception as e:
+        return jsonify({"error_message": "Something went wrong inserting new invitation code to DB: {code}", "details": e}), 500
 
     link = os.getenv('API_DOMAIN_NAME') + f'/v2/users/new_friend?code={code}'
     return jsonify({'invite_link': link}), 200
