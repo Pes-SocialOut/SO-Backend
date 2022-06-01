@@ -137,11 +137,12 @@ def request_new_friend_link():
         return jsonify({'error_message': f'You already have {len(user_invites)} invitation links active.'}), 409
 
     code = get_random_salt(15)
-    new_invite = FriendInvite(auth_id, code, datetime.now(timezone.utc)+timedelta(days=3))
-    try:
-        new_invite.save()
-    except Exception as e:
-        return jsonify({"error_message": f"Something went wrong inserting new invitation code to DB: {code}", "details": e}), 500
+    exp_date = datetime.now()+timedelta(days=3)
+    new_invite = FriendInvite(auth_id, code, exp_date)
+    #try:
+    new_invite.save()
+    #except Exception as e:
+        #return jsonify({"error_message": f"Something went wrong inserting new invitation code to DB: {code}"}), 500
 
     link = os.getenv('API_DOMAIN_NAME') + f'/v2/users/new_friend?code={code}'
     return jsonify({'invite_link': link}), 200
