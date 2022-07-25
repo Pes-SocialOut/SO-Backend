@@ -97,7 +97,6 @@ def create_event():
     # Añadir evento al calendario del creador
     auth_id = uuid.UUID(get_jwt_identity())
     user = GoogleAuth.query.filter_by(id=auth_id).first()
-    #token_victor = "ya29.a0ARrdaM8yuBz8zlr4SaWpxV39Z-80jwROwOaisqSAWQjOQddSx7dlK2diksCazQANU8JlZHBlHi99MWc3Gr6HexgepljLikE4s-5mtvd2yMNc_PVQqPu91Defpz_QCJKmFmMhNLymP5MsSotDYTVlp9qK0bVX"
     if user is not None:
         date_started_formatted = event.date_started.strftime("%Y-%m-%dT%H:%M:%S")
         date_end_formatted = event.date_end.strftime("%Y-%m-%dT%H:%M:%S")
@@ -155,7 +154,6 @@ def modify_events_v2(id):
     # Cambiar el calendario si el modify es correcto
     auth_id = uuid.UUID(get_jwt_identity())
     user = GoogleAuth.query.filter_by(id=auth_id).first()
-    #token_victor = "ya29.a0ARrdaM8yuBz8zlr4SaWpxV39Z-80jwROwOaisqSAWQjOQddSx7dlK2diksCazQANU8JlZHBlHi99MWc3Gr6HexgepljLikE4s-5mtvd2yMNc_PVQqPu91Defpz_QCJKmFmMhNLymP5MsSotDYTVlp9qK0bVX"
     if user is not None:
         editarEventoDesciption(user.access_token, str(event.name), str(args.get("description")))
         editarEventoTitle(user.access_token, str(event.name), str(args.get("name")))
@@ -424,7 +422,6 @@ def leave_event(id):
     # Eliminar el evento del calendario
     auth_id = uuid.UUID(get_jwt_identity())
     user = GoogleAuth.query.filter_by(id=auth_id).first()
-    #token_victor = "ya29.a0ARrdaM8yuBz8zlr4SaWpxV39Z-80jwROwOaisqSAWQjOQddSx7dlK2diksCazQANU8JlZHBlHi99MWc3Gr6HexgepljLikE4s-5mtvd2yMNc_PVQqPu91Defpz_QCJKmFmMhNLymP5MsSotDYTVlp9qK0bVX"
     if user is not None:
         eliminarEventoTitle(user.access_token, event.name)
 

@@ -1,122 +1,71 @@
-from app.module_calendar.quickstart import get_calendar_service
+import os
+
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
 from geopy.geocoders import Nominatim
 
-
-def main():
-    service = get_calendar_service()
-
-    event = {
-    'summary': 'Pruebitax2 Dia',
-    'location': '800 Howard St., San Francisco, CA 94103',
-    'description': 'Pues una prueba',
-    'start': {
-        'dateTime': '2022-05-10T09:00:00',  
-        'timeZone': 'Europe/Madrid',
-    },
-    'end': {
-        'dateTime': '2022-05-10T10:00:00',
-        'timeZone': 'Europe/Madrid',
-    },
-    
-    
-    'reminders': {
-        'useDefault': False,
-        'overrides': [
-        {'method': 'email', 'minutes': 24 * 60},
-        {'method': 'popup', 'minutes': 10},
+def get_calendar_service(tokenUser):
+    creds = Credentials.from_authorized_user_info({
+        "token": tokenUser,
+        "refresh_token": "",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "client_id": os.getenv('GOOGLE_CLIENT_ID'),
+        "client_secret": os.getenv('GOOGLE_CLIENT_SECRET'),
+        "scopes": [
+            "https://www.googleapis.com/auth/calendar"
         ],
-    },
-    }
-
-
-    """'attendees': [
-        {'email': 'lpage@example.com'},
-        {'email': 'sbrin@example.com'},
-    ],"""
-    event = service.events().insert(calendarId='primary', body=event).execute()
-    print ('Event created: %s' % (event.get('htmlLink')))
-
-
-
-    print("created event")
-    print("id: ", event['id'])
-    print("summary: ", event['summary'])
-    print("starts at: ", event['start']['dateTime'])
-    print("ends at: ", event['end']['dateTime'])
-
-if __name__ == '__main__':
-   main()
+        "expiry": "2023-05-29T23:19:42.576951Z"
+    }, ['https://www.googleapis.com/auth/calendar'])
+    service = build('calendar', 'v3', credentials=creds)
+    return service
 
 def eliminarEventoID(tokenUser, eventID):
     service = get_calendar_service(tokenUser)
     service.events().delete(calendarId='primary', eventId= eventID ).execute()
 
 def eliminarEventoTitle(tokenUser, title):
-    service = get_calendar_service(tokenUser)
     events = buscarEventoTitle(tokenUser, title)
     for event in events['items']:
         eliminarEventoID(tokenUser, event['id'])
     if events['items'] == []:
-        print("No hay eventos con este titulo")
+        raise Exception(f"No hay eventos con titulo {title}")
 
 
 def buscarEventoTitle(tokenUser, title):
     service = get_calendar_service(tokenUser)
-    
     events = service.events().list(calendarId='primary', singleEvents=True, q=title).execute()
-    for event in events['items']:
-        print( event['summary'])
-        print( event['id'])
-        print( event['location'])
-        print(event['start']['dateTime'])
-        print(event['end']['dateTime'])
     if events['items'] == []:
-        print("No hay eventos con este titulo")
+        raise Exception(f"No hay eventos con titulo {title}")
     return events
 
 
 def crearEvento(tokenUser, title, description, latitude, longitude, startDateTime, endDateTime):
-
     service = get_calendar_service(tokenUser)
     location = obtenerLocation(latitude, longitude)
     event = {
-    'summary': title,
-    'location': str(location),
-    'description': description,
-    'start': {
-        'dateTime': startDateTime,  
-        'timeZone': 'Europe/Madrid',
-    },
-    'end': {
-        'dateTime': endDateTime,
-        'timeZone': 'Europe/Madrid',
-    },
-    
-    
-    'reminders': {
-        'useDefault': False,
-        'overrides': [
-        {'method': 'email', 'minutes': 24 * 60},
-        {'method': 'popup', 'minutes': 10},
-        ],
-    },
+        'summary': title,
+        'location': str(location),
+        'description': description,
+        'start': {
+            'dateTime': startDateTime,  
+            'timeZone': 'Europe/Madrid',
+        },
+        'end': {
+            'dateTime': endDateTime,
+            'timeZone': 'Europe/Madrid',
+        },
+        
+        
+        'reminders': {
+            'useDefault': False,
+            'overrides': [
+            {'method': 'email', 'minutes': 24 * 60},
+            {'method': 'popup', 'minutes': 10},
+            ],
+        },
     }
-
-
-    """'attendees': [
-        {'email': 'lpage@example.com'},
-        {'email': 'sbrin@example.com'},
-    ],"""
+    
     event = service.events().insert(calendarId='primary', body=event).execute()
-    print ('Event created: %s' % (event.get('htmlLink')))
-
-
-
-    print("created event")
-    print("id: ", event['id'])
-    print("summary: ", event['summary'])
-    print("starts at: ", event['start']['dateTime'])
-    print("ends at: ", event['end']['dateTime'])
 
 
 def obtenerLocation(latitude, longitude):
@@ -124,7 +73,6 @@ def obtenerLocation(latitude, longitude):
     geoLoc = Nominatim(user_agent="GetLoc")
     # passing the coordinates
     locname = geoLoc.reverse(str(latitude)+","+ str(longitude))
-    print (locname)
     return locname
 
 def editarEventoTitle(tokenUser, oldTitle, newTitle):
@@ -133,8 +81,7 @@ def editarEventoTitle(tokenUser, oldTitle, newTitle):
     for event in events['items']:
         #modificar aqui cada evento
         event['summary'] = newTitle
-        updated_event = service.events().update(calendarId='primary', eventId=event['id'], body=event).execute()
-        print( updated_event['updated'])
+        service.events().update(calendarId='primary', eventId=event['id'], body=event).execute()
 
 def editarEventoDate(tokenUser,title, dateTimeStart, dateTimeEnd):
     service = get_calendar_service(tokenUser)
@@ -143,8 +90,7 @@ def editarEventoDate(tokenUser,title, dateTimeStart, dateTimeEnd):
         #modificar aqui cada evento
         event['start']['dateTime'] = dateTimeStart
         event['end']['dateTime'] = dateTimeEnd
-        updated_event = service.events().update(calendarId='primary', eventId=event['id'], body=event).execute()
-        print( updated_event['updated'])
+        service.events().update(calendarId='primary', eventId=event['id'], body=event).execute()
 
 def editarEventoDesciption(tokenUser, title, description):
     service = get_calendar_service(tokenUser)
@@ -152,5 +98,4 @@ def editarEventoDesciption(tokenUser, title, description):
     for event in events['items']:
         #modificar aqui cada evento
         event['description'] = description
-        updated_event = service.events().update(calendarId='primary', eventId=event['id'], body=event).execute()
-        print( updated_event['updated'])
+        service.events().update(calendarId='primary', eventId=event['id'], body=event).execute()
